@@ -2,158 +2,147 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  // Change this to your actual backend URL
-  static const String baseUrl = "http://localhost:8088/api";  // Android Emulator
+  // Địa chỉ backend của bạn
+  // Để test trên Android Emulator: dùng 10.0.2.2 thay vì localhost
+  // Để test trên thiết bị thật: dùng IP máy tính (vd: 192.168.1.100)
+  static const String baseUrl = 'http://10.0.2.2:8080/api';
 
-  
+  // Hoặc nếu backend deploy online:
+  // static const String baseUrl = 'https://your-domain.com/api';
 
-  // Login
-  static Future<Map<String, dynamic>> login(String email, String password) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/login'),
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-        },
-        body: jsonEncode({
-          "email": email, 
-          "password": password
-        }),
-      );
-
-      print('Login Response Status: ${response.statusCode}');
-      print('Login Response Body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return {
-          'success': true,
-          'token': data["token"],
-          'user': data["user"], // if your backend returns user data
-          'message': 'Login successful'
-        };
-      } else {
-        final errorData = jsonDecode(response.body);
-        return {
-          'success': false,
-          'message': errorData['message'] ?? 'Login failed',
-          'error': response.body
-        };
-      }
-    } catch (e) {
-      print('Login Error: $e');
-      return {
-        'success': false,
-        'message': 'Network error: ${e.toString()}',
-        'error': e.toString()
+  // Headers mặc định
+  static Map<String, String> get headers => {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
       };
+
+  // GET request
+  static Future<dynamic> get(String endpoint,
+      {Map<String, String>? customHeaders}) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: customHeaders ?? headers,
+      );
+      return _handleResponse(response);
+    } catch (e) {
+      throw Exception('Lỗi kết nối: $e');
     }
   }
 
-  // Register
-  static Future<Map<String, dynamic>> register({
-    required String firstName,
-    required String lastName,
-    required String email,
-    required String password,
-    required String phone,
+  // POST request
+  static Future<dynamic> post(
+    String endpoint, {
+    required Map<String, dynamic> body,
+    Map<String, String>? customHeaders,
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/register'),
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-        },
-        body: jsonEncode({
-          "firstName": firstName,
-          "lastName": lastName,
-          "email": email,
-          "password": password,
-          "phone": phone,
-        }),
+        Uri.parse('$baseUrl$endpoint'),
+        headers: customHeaders ?? headers,
+        body: jsonEncode(body),
       );
-
-      print('Register Response Status: ${response.statusCode}');
-      print('Register Response Body: ${response.body}');
-
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return {
-          'success': true,
-          'message': 'Registration successful',
-          'data': data
-        };
-      } else {
-        final errorData = jsonDecode(response.body);
-        return {
-          'success': false,
-          'message': errorData['message'] ?? 'Registration failed',
-          'error': response.body
-        };
-      }
+      return _handleResponse(response);
     } catch (e) {
-      print('Register Error: $e');
-      return {
-        'success': false,
-        'message': 'Network error: ${e.toString()}',
-        'error': e.toString()
-      };
+      throw Exception('Lỗi kết nối: $e');
     }
   }
 
-  // Get Users (with token)
-  static Future<Map<String, dynamic>> getUsers(String token) async {
+  // PUT request
+  static Future<dynamic> put(
+    String endpoint, {
+    required Map<String, dynamic> body,
+    Map<String, String>? customHeaders,
+  }) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/users'),
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "Authorization": "Bearer $token"
-        },
+      final response = await http.put(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: customHeaders ?? headers,
+        body: jsonEncode(body),
       );
-
-      print('Get Users Response Status: ${response.statusCode}');
-      print('Get Users Response Body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return {
-          'success': true,
-          'users': data,
-          'message': 'Users loaded successfully'
-        };
-      } else {
-        return {
-          'success': false,
-          'message': 'Failed to load users',
-          'error': response.body
-        };
-      }
+      return _handleResponse(response);
     } catch (e) {
-      print('Get Users Error: $e');
-      return {
-        'success': false,
-        'message': 'Network error: ${e.toString()}',
-        'error': e.toString()
-      };
+      throw Exception('Lỗi kết nối: $e');
     }
   }
 
-  // Test connection
-  static Future<bool> testConnection() async {
+  // DELETE request
+  static Future<dynamic> delete(String endpoint,
+      {Map<String, String>? customHeaders}) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/health'), // Add health check endpoint in your backend
-        headers: {"Content-Type": "application/json"},
-      ).timeout(const Duration(seconds: 5));
-
-      return response.statusCode == 200;
+      final response = await http.delete(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: customHeaders ?? headers,
+      );
+      return _handleResponse(response);
     } catch (e) {
-      print('Connection test failed: $e');
-      return false;
+      throw Exception('Lỗi kết nối: $e');
     }
+  }
+
+  // Xử lý response
+  static dynamic _handleResponse(http.Response response) {
+    if (response.body.isEmpty) {
+      throw Exception('Server không trả về dữ liệu');
+    }
+
+    try {
+      final jsonResponse = jsonDecode(response.body);
+
+      switch (response.statusCode) {
+        case 200:
+        case 201:
+          return jsonResponse;
+        case 400:
+          // Bad Request - lấy message từ response nếu có
+          final message = jsonResponse['message'] ?? 'Yêu cầu không hợp lệ';
+          throw Exception(message);
+        case 401:
+          final message =
+              jsonResponse['message'] ?? 'Phiên đăng nhập đã hết hạn';
+          throw Exception(message);
+        case 403:
+          final message = jsonResponse['message'] ?? 'Không có quyền truy cập';
+          throw Exception(message);
+        case 404:
+          final message =
+              jsonResponse['message'] ?? 'Không tìm thấy tài nguyên';
+          throw Exception(message);
+        case 500:
+          final message = jsonResponse['message'] ?? 'Lỗi máy chủ nội bộ';
+          throw Exception(message);
+        default:
+          final message = jsonResponse['message'] ?? 'Lỗi không xác định';
+          throw Exception('$message (${response.statusCode})');
+      }
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('Lỗi xử lý dữ liệu từ server');
+    }
+  }
+
+  // POST request với authentication token
+  static Future<dynamic> postWithAuth(
+    String endpoint, {
+    required Map<String, dynamic> body,
+    required String token,
+  }) async {
+    final authHeaders = {
+      ...headers,
+      'Authorization': 'Bearer $token',
+    };
+    return post(endpoint, body: body, customHeaders: authHeaders);
+  }
+
+  // GET request với authentication token
+  static Future<dynamic> getWithAuth(
+    String endpoint, {
+    required String token,
+  }) async {
+    final authHeaders = {
+      ...headers,
+      'Authorization': 'Bearer $token',
+    };
+    return get(endpoint, customHeaders: authHeaders);
   }
 }

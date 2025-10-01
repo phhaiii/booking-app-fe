@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:booking_app/utils/constants/image_strings.dart';
-import 'package:booking_app/utils/constants/text_strings.dart'; 
-import 'package:booking_app/utils/constants/sizes.dart';  
-import 'package:booking_app/utils/helpers/helpers.dart';  
+import 'package:booking_app/utils/constants/text_strings.dart';
+import 'package:booking_app/utils/constants/sizes.dart';
+import 'package:booking_app/utils/helpers/helpers.dart';
 
 class WLoginHeader extends StatelessWidget {
-  const WLoginHeader({super.key,});
-
+  const WLoginHeader({
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -16,8 +17,7 @@ class WLoginHeader extends StatelessWidget {
       children: [
         Image(
           height: 150,
-          image:
-              AssetImage(dark ? WImages.lightlogo : WImages.darklogo),
+          image: AssetImage(dark ? WImages.lightlogo : WImages.darklogo),
         ),
         Text(
           WTexts.loginTitle,
