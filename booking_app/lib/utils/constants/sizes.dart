@@ -55,5 +55,6 @@ class WSizes {
   static const double inputFieldRadius = 12.0;
   static const double spaceBtwInputFields = 16.0;
 
-  
+  static const double wDashBoardPadding = 20.0;
+  static const double wDashBoardCardPadding = 10.0;
 }

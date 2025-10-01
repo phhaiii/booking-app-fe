@@ -6,7 +6,7 @@ import 'package:booking_app/utils/theme/chip.dart';
 import 'package:booking_app/utils/theme/checkbox_theme.dart'; 
 import 'package:booking_app/utils/theme/outlined_button_theme.dart';
 import 'package:booking_app/utils/theme/text_field_theme.dart';
-
+import 'package:booking_app/utils/constants/colors.dart';
 
 class WAppTheme {
   WAppTheme._();
@@ -15,7 +15,7 @@ class WAppTheme {
     useMaterial3: true,
     fontFamily: 'Playfair Display',
     brightness: Brightness.light,
-    primaryColor: Colors.blue,
+    primaryColor: WColors.primary,
     scaffoldBackgroundColor: Colors.white,
     textTheme: WTextTheme.lightTextTheme,
     elevatedButtonTheme: WElevatedButtonTheme.lightElevatedButtonTheme,
@@ -29,7 +29,7 @@ class WAppTheme {
     useMaterial3: true,
     fontFamily: 'Playfair Display',
     brightness: Brightness.dark,
-    primaryColor: Colors.blue,
+    primaryColor: WColors.primary,
     scaffoldBackgroundColor: Colors.black,
     textTheme: WTextTheme.darkTextTheme,
     elevatedButtonTheme: WElevatedButtonTheme.darkElevatedButtonTheme,

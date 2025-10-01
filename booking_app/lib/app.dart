@@ -1,9 +1,9 @@
+import 'package:booking_app/features/screen/dashboard/dashboard.dart';
 import 'package:booking_app/utils/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'features/screen/onboarding/onboarding.dart';
 import 'package:get/get.dart';
 import 'package:booking_app/service/authentication.dart';
-
 
 class App extends StatelessWidget {
   const App({super.key});
@@ -13,9 +13,10 @@ class App extends StatelessWidget {
     Get.put(AuthController());
     return GetMaterialApp(
       title: 'Wedding App',
-      themeMode: ThemeMode.system, 
+      themeMode: ThemeMode.system,
       theme: WAppTheme.lightTheme,
       darkTheme: WAppTheme.darkTheme,
+      debugShowCheckedModeBanner: false,
       home: const OnboardingScreen(),
     );
   }

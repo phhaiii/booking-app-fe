@@ -1,10 +1,12 @@
+import 'package:booking_app/features/screen/dashboard/dashboard.dart';
 import 'package:booking_app/features/screen/signup/signup.dart';
 import 'package:flutter/material.dart';
 import 'package:booking_app/utils/constants/text_strings.dart';
 import 'package:booking_app/utils/constants/sizes.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:get/get.dart';
-import 'package:booking_app/service/authentication.dart';
+import 'package:booking_app/features/screen/dashboard/dashboard.dart';
+import 'package:booking_app/utils/constants/colors.dart';
 
 class WLoginForm extends StatelessWidget {
   const WLoginForm({
@@ -13,7 +15,7 @@ class WLoginForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authController = Get.put(AuthController());
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Form(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: WSizes.spaceBtwSections),
@@ -62,7 +64,7 @@ class WLoginForm extends StatelessWidget {
             SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () => Get.to(() => const DashboardScreen()),
                   child: const Text(WTexts.signIn),
                 )),
             const SizedBox(height: WSizes.spaceBtwItems),
@@ -70,7 +72,9 @@ class WLoginForm extends StatelessWidget {
             ///Create Account
             SizedBox(
                 width: double.infinity,
-                child: OutlinedButton(onPressed: () => Get.to(()=> const SignupScreen()),child: const Text(WTexts.createAccount),
+                child: OutlinedButton(
+                  onPressed: () => Get.to(() => const SignupScreen()),
+                  child: const Text(WTexts.createAccount),
                 )),
           ],
         ),
