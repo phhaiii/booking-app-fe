@@ -1,4 +1,4 @@
-import 'package:booking_app/model/user_response.dart';
+import 'package:booking_app/models/user_response.dart';
 
 class AuthResponse {
   final String accessToken;

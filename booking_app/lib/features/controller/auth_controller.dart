@@ -2,9 +2,9 @@ import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:booking_app/service/api.dart';
 import 'package:booking_app/service/storage_service.dart';
-import 'package:booking_app/model/api_response.dart';
-import 'package:booking_app/model/auth_response.dart';
-import 'package:booking_app/model/login_request.dart';
+import 'package:booking_app/models/api_response.dart';
+import 'package:booking_app/models/auth_response.dart';
+import 'package:booking_app/models/login_request.dart';
 
 class AuthController extends GetxController {
   static AuthController get instance => Get.find();
