@@ -4,31 +4,36 @@ import 'package:flutter/material.dart';
 import 'package:booking_app/utils/constants/sizes.dart';
 import 'package:booking_app/features/screen/login/login_header.dart';
 import 'package:booking_app/features/screen/login/login_form.dart';
+import 'package:booking_app/features/controller/auth_controller.dart';
 import 'package:get/get.dart';
 import 'package:booking_app/common/widgets.login_signup/form_divider.dart';
-import 'package:booking_app/common/widgets.login_signup/social_button.dart';  
+import 'package:booking_app/common/widgets.login_signup/social_button.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Khởi tạo AuthController
+    Get.lazyPut(() => AuthController());
+
     return Scaffold(
       body: SingleChildScrollView(
         child: Padding(
           padding: WSpacingStyle.paddingWithAppBarHeight,
           child: Column(
             children: [
-              //Logo,Title,Subtitle
+              // Logo, Title, Subtitle
               const WLoginHeader(),
 
-              ///Form
+              // Form
               const WLoginForm(),
-              //Divider
+
+              // Divider
               WFormDivider(dividerText: WTexts.orSignInWith.capitalize!),
               const SizedBox(height: WSizes.spaceBtwItems),
 
-              ///Footer
+              // Footer - Social Buttons
               const WSocialButton()
             ],
           ),
@@ -37,4 +42,3 @@ class LoginScreen extends StatelessWidget {
     );
   }
 }
-
