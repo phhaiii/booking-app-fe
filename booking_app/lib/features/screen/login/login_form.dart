@@ -4,6 +4,7 @@ import 'package:booking_app/utils/constants/text_strings.dart';
 import 'package:booking_app/utils/constants/sizes.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:get/get.dart';
+import 'package:booking_app/service/authentication.dart';
 
 class WLoginForm extends StatelessWidget {
   const WLoginForm({
@@ -12,6 +13,7 @@ class WLoginForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final authController = Get.put(AuthController());
     return Form(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: WSizes.spaceBtwSections),
