@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:booking_app/utils/constants/colors.dart';
 
 class WCheckboxTheme {
   WCheckboxTheme._();
@@ -14,7 +15,7 @@ class WCheckboxTheme {
     }),
     fillColor: MaterialStateProperty.resolveWith((states) {
       if (states.contains(MaterialState.selected)) {
-        return Colors.blue;
+        return WColors.primary;
       } else {
         return Colors.white;
       }
@@ -32,7 +33,7 @@ class WCheckboxTheme {
     }),
     fillColor: MaterialStateProperty.resolveWith((states) {
       if (states.contains(MaterialState.selected)) {
-        return Colors.blue;
+        return WColors.primary;
       } else {
         return Colors.white;
       }

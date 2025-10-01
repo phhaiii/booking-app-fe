@@ -1,3 +1,4 @@
+import 'package:booking_app/features/screen/dashboard/dashboard.dart';
 import 'package:booking_app/features/screen/signup/signup.dart';
 import 'package:booking_app/features/controller/auth_controller.dart';
 import 'package:flutter/material.dart';
@@ -5,12 +6,16 @@ import 'package:booking_app/utils/constants/text_strings.dart';
 import 'package:booking_app/utils/constants/sizes.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:get/get.dart';
+import 'package:booking_app/features/screen/dashboard/dashboard.dart';
+import 'package:booking_app/utils/constants/colors.dart';
+
 
 class WLoginForm extends StatelessWidget {
   const WLoginForm({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final controller = Get.put(AuthController());
 
     return Form(
@@ -87,6 +92,9 @@ class WLoginForm extends StatelessWidget {
               () => SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
+//                   onPressed: () => Get.to(() => const DashboardScreen()),
+//                   child: const Text(WTexts.signIn),
+//                 )),
                   onPressed:
                       controller.isLoading.value ? null : controller.login,
                   child: controller.isLoading.value
@@ -107,12 +115,11 @@ class WLoginForm extends StatelessWidget {
 
             // Create Account
             SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () => Get.to(() => const SignupScreen()),
-                child: const Text(WTexts.createAccount),
-              ),
-            ),
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () => Get.to(() => const SignupScreen()),
+                  child: const Text(WTexts.createAccount),
+                )),
           ],
         ),
       ),
