@@ -62,4 +62,6 @@ class WTexts {
   static const String chat = 'talk with us';
   static const String book = 'book us';
   static const String search = 'Search...';
+
+  static const String profile = 'Profile';
 }

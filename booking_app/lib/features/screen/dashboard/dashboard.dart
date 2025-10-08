@@ -1,8 +1,11 @@
+import 'package:booking_app/features/profile/proflie_screen.dart';
 import 'package:booking_app/utils/constants/colors.dart';
 import 'package:booking_app/utils/constants/image_strings.dart';
+import 'package:booking_app/utils/device/device_utility.dart';
 import 'package:flutter/material.dart';
 import 'package:booking_app/utils/constants/sizes.dart';
 import 'package:booking_app/utils/constants/text_strings.dart';
+import 'package:get/get.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -12,7 +15,6 @@ class DashboardScreen extends StatelessWidget {
     final txtTheme = Theme.of(context).textTheme;
     return Scaffold(
       appBar: AppBar(
-        leading: const Icon(Icons.menu, color: Colors.black),
         title: Text(WTexts.wAppName,
             style: Theme.of(context).textTheme.headlineMedium),
         centerTitle: true,
@@ -25,33 +27,37 @@ class DashboardScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                   color: Colors.transparent),
               child: IconButton(
-                  onPressed: () {},
-                  icon: const Image(image: AssetImage(WImages.userProfile)))),
+                  onPressed: () => Get.to(() => const ProfileScreen()),
+                  icon: const Image(image: AssetImage(WImages.userProfile))),
+          ),
         ],
       ),
+      
       body: SingleChildScrollView(
         child: Column(
           children: [
             //  Ô search nằm riêng
-            Container(
-              margin: const EdgeInsets.all(15),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.search),
-                  const SizedBox(width: WSizes.spaceBtwItems),
-                  Text(
-                    WTexts.search,
-                    style: txtTheme.headlineMedium
-                        ?.apply(color: Colors.grey.withOpacity(0.5)),
-                  ),
-                ],
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: WSizes.defaultSpace),
+              child: Container(
+                width: WDeviceUtils.getScreenWidth(),
+                padding: const EdgeInsets.all(WSizes.medium),
+                decoration: BoxDecoration(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: WColors.grey)
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.search, color: WColors.grey),
+                    const SizedBox(width: WSizes.spaceBtwItems),
+                    Text(WTexts.search,style: Theme.of(context).textTheme.bodySmall),
+                  ],
+                ),
               ),
             ),
+            const SizedBox(height: WSizes.spaceBtwSections),
+            
             // Khung chứa nội dung
             Container(
               margin: const EdgeInsets.all(15),
@@ -66,12 +72,14 @@ class DashboardScreen extends StatelessWidget {
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                
                 children: [
-                   Text(
-                    WTexts.dashBoardingTitle,
-                    style: txtTheme.headlineMedium,
-                    textAlign: TextAlign.left,
+                  TextButton(
+                    onPressed: () {},
+                    child: Text(
+                      WTexts.dashBoardingTitle,
+                      style: txtTheme.headlineMedium,
+                      textAlign: TextAlign.left,
+                    ),
                   ),
                   const SizedBox(height: WSizes.spaceBtwItems),
                   Image(
@@ -91,12 +99,11 @@ class DashboardScreen extends StatelessWidget {
                     children: [
                       Container(
                         decoration: BoxDecoration(
-                          border: Border.all(color: WColors.grey),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
+                            borderRadius: BorderRadius.circular(20),
+                            color: Colors.transparent),
                         child: IconButton(
                           onPressed: () {},
-                          icon: const Icon(Icons.heart_broken_rounded),
+                          icon: const Icon( Icons.favorite, color: Colors.red),
                         ),
                       ),
                     ],
@@ -104,7 +111,7 @@ class DashboardScreen extends StatelessWidget {
                 ],
               ),
             ),
-             Container(
+            Container(
               margin: const EdgeInsets.all(15),
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -117,9 +124,8 @@ class DashboardScreen extends StatelessWidget {
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                
                 children: [
-                   Text(
+                  Text(
                     WTexts.dashBoardingTitle,
                     style: txtTheme.headlineMedium,
                     textAlign: TextAlign.left,
@@ -142,12 +148,12 @@ class DashboardScreen extends StatelessWidget {
                     children: [
                       Container(
                         decoration: BoxDecoration(
-                          border: Border.all(color: WColors.grey),
+                          border: Border.all(color: Colors.transparent),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: IconButton(
                           onPressed: () {},
-                          icon: const Icon(Icons.heart_broken_rounded),
+                          icon: const Icon( Icons.favorite, color: Colors.red),
                         ),
                       ),
                     ],
@@ -155,7 +161,7 @@ class DashboardScreen extends StatelessWidget {
                 ],
               ),
             ),
-             Container(
+            Container(
               margin: const EdgeInsets.all(15),
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -168,9 +174,8 @@ class DashboardScreen extends StatelessWidget {
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                
                 children: [
-                   Text(
+                  Text(
                     WTexts.dashBoardingTitle2,
                     style: txtTheme.headlineMedium,
                     textAlign: TextAlign.left,
@@ -193,12 +198,12 @@ class DashboardScreen extends StatelessWidget {
                     children: [
                       Container(
                         decoration: BoxDecoration(
-                          border: Border.all(color: WColors.grey),
+                          border: Border.all(color: Colors.transparent),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: IconButton(
                           onPressed: () {},
-                          icon: const Icon(Icons.heart_broken_rounded),
+                          icon: const Icon( Icons.favorite, color: Colors.red),
                         ),
                       ),
                     ],
@@ -206,7 +211,7 @@ class DashboardScreen extends StatelessWidget {
                 ],
               ),
             ),
-             Container(
+            Container(
               margin: const EdgeInsets.all(15),
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -219,9 +224,8 @@ class DashboardScreen extends StatelessWidget {
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                
                 children: [
-                   Text(
+                  Text(
                     WTexts.dashBoardingTitle3,
                     style: txtTheme.headlineMedium,
                     textAlign: TextAlign.left,
@@ -244,12 +248,12 @@ class DashboardScreen extends StatelessWidget {
                     children: [
                       Container(
                         decoration: BoxDecoration(
-                          border: Border.all(color: WColors.grey),
+                          border: Border.all(color: Colors.transparent),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: IconButton(
                           onPressed: () {},
-                          icon: const Icon(Icons.heart_broken_rounded),
+                          icon: const Icon( Icons.favorite, color: Colors.red),
                         ),
                       ),
                     ],
@@ -257,7 +261,7 @@ class DashboardScreen extends StatelessWidget {
                 ],
               ),
             ),
-             Container(
+            Container(
               margin: const EdgeInsets.all(15),
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -270,9 +274,8 @@ class DashboardScreen extends StatelessWidget {
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                
                 children: [
-                   Text(
+                  Text(
                     WTexts.dashBoardingTitle4,
                     style: txtTheme.headlineMedium,
                     textAlign: TextAlign.left,
@@ -295,12 +298,12 @@ class DashboardScreen extends StatelessWidget {
                     children: [
                       Container(
                         decoration: BoxDecoration(
-                          border: Border.all(color: WColors.grey),
+                          border: Border.all(color: Colors.transparent),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: IconButton(
                           onPressed: () {},
-                          icon: const Icon(Icons.heart_broken_rounded),
+                          icon: const Icon( Icons.favorite, color: Colors.red),
                         ),
                       ),
                     ],
@@ -308,7 +311,7 @@ class DashboardScreen extends StatelessWidget {
                 ],
               ),
             ),
-             Container(
+            Container(
               margin: const EdgeInsets.all(15),
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -321,9 +324,8 @@ class DashboardScreen extends StatelessWidget {
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                
                 children: [
-                   Text(
+                  Text(
                     WTexts.dashBoardingTitle5,
                     style: txtTheme.headlineMedium,
                     textAlign: TextAlign.left,
@@ -346,12 +348,12 @@ class DashboardScreen extends StatelessWidget {
                     children: [
                       Container(
                         decoration: BoxDecoration(
-                          border: Border.all(color: WColors.grey),
+                          border: Border.all(color: Colors.transparent),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: IconButton(
                           onPressed: () {},
-                          icon: const Icon(Icons.heart_broken_rounded),
+                          icon: const Icon( Icons.favorite, color: Colors.red),
                         ),
                       ),
                     ],

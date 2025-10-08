@@ -31,7 +31,6 @@ class AuthController extends GetxController {
   Future<void> checkLoginStatus() async {
     final isLoggedIn = await StorageService.isLoggedIn();
     if (isLoggedIn) {
-      // TODO: Navigate to home screen
       // Get.offAllNamed('/home');
     }
   }

@@ -16,6 +16,5 @@ class WImages {
   static const String dashBoard3 = 'assets/images/dashboard3.jpg';
   static const String dashBoard4 = 'assets/images/dashboard4.jpg';
   static const String dashBoard5 = 'assets/images/dashboard6.jpg';
-
-
+  
 }
