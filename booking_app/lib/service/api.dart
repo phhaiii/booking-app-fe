@@ -5,7 +5,7 @@ class ApiService {
   // Địa chỉ backend của bạn
   // Để test trên Android Emulator: dùng 10.0.2.2 thay vì localhost
   // Để test trên thiết bị thật: dùng IP máy tính (vd: 192.168.1.100)
-  static const String baseUrl = 'http://10.0.2.2:8080/api';
+  static const String baseUrl = 'http://10.0.2.2:8088/api';
 
   // Hoặc nếu backend deploy online:
   // static const String baseUrl = 'https://your-domain.com/api';

@@ -9,14 +9,13 @@ import 'package:get/get.dart';
 import 'package:booking_app/features/screen/dashboard/dashboard.dart';
 import 'package:booking_app/utils/constants/colors.dart';
 
-
 class WLoginForm extends StatelessWidget {
   const WLoginForm({super.key});
 
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final controller = Get.put(AuthController());
+    final controller = Get.find<AuthController>();
 
     return Form(
       child: Padding(
