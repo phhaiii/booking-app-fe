@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:booking_app/service/api.dart';
 import 'package:booking_app/service/storage_service.dart';
+import 'package:booking_app/features/screen/dashboard/dashboard.dart';
 import 'package:booking_app/models/api_response.dart';
 import 'package:booking_app/models/auth_response.dart';
 import 'package:booking_app/models/login_request.dart';
@@ -129,7 +130,7 @@ class AuthController extends GetxController {
         passwordController.clear();
 
         // Navigate to home screen sau 1 giây
-        await Future.delayed(Duration(seconds: 1));
+        Get.offAll(() => DashboardScreen());
         // TODO: Thay đổi route phù hợp với app của bạn
         // Get.offAllNamed('/home');
         print('Login success - Navigate to home');
