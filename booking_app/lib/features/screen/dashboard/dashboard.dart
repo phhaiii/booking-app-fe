@@ -1,368 +1,170 @@
-import 'package:booking_app/features/profile/proflie_screen.dart';
+import 'package:booking_app/features/screen/dashboard/dashboard_card.dart';
+import 'package:booking_app/features/screen/profile/proflie_screen.dart';
 import 'package:booking_app/utils/constants/colors.dart';
-import 'package:booking_app/utils/constants/image_strings.dart';
-import 'package:booking_app/utils/device/device_utility.dart';
 import 'package:flutter/material.dart';
 import 'package:booking_app/utils/constants/sizes.dart';
 import 'package:booking_app/utils/constants/text_strings.dart';
 import 'package:get/get.dart';
+import 'package:iconsax/iconsax.dart';
+import 'package:booking_app/features/controller/dashboard_controller.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final txtTheme = Theme.of(context).textTheme;
+    final controller = Get.put(DashboardController());
+    final searchController = TextEditingController();
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(WTexts.wAppName,
-            style: Theme.of(context).textTheme.headlineMedium),
+        title: Text(
+          WTexts.wAppName,
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: WColors.primary,
+              ),
+        ),
         centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.transparent,
         actions: [
           Container(
-              margin: const EdgeInsets.only(right: 20, top: 7),
-              decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  color: Colors.transparent),
-              child: IconButton(
-                  onPressed: () => Get.to(() => const ProfileScreen()),
-                  icon: const Image(image: AssetImage(WImages.userProfile))),
+            margin: const EdgeInsets.only(right: WSizes.defaultSpace),
+            child: IconButton(
+              onPressed: () => Get.to(() => const ProfileScreen()),
+              icon: const Icon(
+                Iconsax.profile_circle,
+                size: 32,
+                color: WColors.primary,
+              ),
+            ),
           ),
         ],
       ),
-      
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            //  Ô search nằm riêng
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: WSizes.defaultSpace),
-              child: Container(
-                width: WDeviceUtils.getScreenWidth(),
-                padding: const EdgeInsets.all(WSizes.medium),
-                decoration: BoxDecoration(
-                  color: Colors.transparent,
-                  borderRadius: BorderRadius.circular(15),
-                  border: Border.all(color: WColors.grey)
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.search, color: WColors.grey),
-                    const SizedBox(width: WSizes.spaceBtwItems),
-                    Text(WTexts.search,style: Theme.of(context).textTheme.bodySmall),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: WSizes.spaceBtwSections),
-            
-            // Khung chứa nội dung
-            Container(
-              margin: const EdgeInsets.all(15),
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(
-                  color: Colors.grey,
-                  width: 2,
-                ),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextButton(
-                    onPressed: () {},
-                    child: Text(
-                      WTexts.dashBoardingTitle,
-                      style: txtTheme.headlineMedium,
-                      textAlign: TextAlign.left,
-                    ),
-                  ),
-                  const SizedBox(height: WSizes.spaceBtwItems),
-                  Image(
-                    width: 750,
-                    height: 250,
-                    image: AssetImage(WImages.dashBoard1),
-                  ),
-                  const SizedBox(height: WSizes.spaceBtwItems),
-                  Text(
-                    WTexts.dashBoardingSubTitle,
-                    style: txtTheme.bodySmall,
-                    textAlign: TextAlign.left,
-                  ),
-                  const SizedBox(height: WSizes.spaceBtwItems),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
-                            color: Colors.transparent),
-                        child: IconButton(
-                          onPressed: () {},
-                          icon: const Icon( Icons.favorite, color: Colors.red),
-                        ),
+      body: RefreshIndicator(
+        onRefresh: controller.refreshVenues,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            children: [
+              // Search Box
+              _buildSearchBox(context, controller, searchController),
+
+              const SizedBox(height: WSizes.spaceBtwItems),   
+
+              // Loading indicator
+              Obx(() => controller.isLoading.value
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(WSizes.defaultSpace),
+                        child:
+                            CircularProgressIndicator(color: WColors.primary),
                       ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              margin: const EdgeInsets.all(15),
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(
-                  color: Colors.grey,
-                  width: 2,
-                ),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    WTexts.dashBoardingTitle,
-                    style: txtTheme.headlineMedium,
-                    textAlign: TextAlign.left,
-                  ),
-                  const SizedBox(height: WSizes.spaceBtwItems),
-                  Image(
-                    width: 750,
-                    height: 250,
-                    image: AssetImage(WImages.dashBoard2),
-                  ),
-                  const SizedBox(height: WSizes.spaceBtwItems),
-                  Text(
-                    WTexts.dashBoardingSubTitle1,
-                    style: txtTheme.bodySmall,
-                    textAlign: TextAlign.left,
-                  ),
-                  const SizedBox(height: WSizes.spaceBtwItems),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.transparent),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: IconButton(
-                          onPressed: () {},
-                          icon: const Icon( Icons.favorite, color: Colors.red),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              margin: const EdgeInsets.all(15),
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(
-                  color: Colors.grey,
-                  width: 2,
-                ),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    WTexts.dashBoardingTitle2,
-                    style: txtTheme.headlineMedium,
-                    textAlign: TextAlign.left,
-                  ),
-                  const SizedBox(height: WSizes.spaceBtwItems),
-                  Image(
-                    width: 750,
-                    height: 250,
-                    image: AssetImage(WImages.dashBoard2),
-                  ),
-                  const SizedBox(height: WSizes.spaceBtwItems),
-                  Text(
-                    WTexts.dashBoardingSubTitle2,
-                    style: txtTheme.bodySmall,
-                    textAlign: TextAlign.left,
-                  ),
-                  const SizedBox(height: WSizes.spaceBtwItems),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.transparent),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: IconButton(
-                          onPressed: () {},
-                          icon: const Icon( Icons.favorite, color: Colors.red),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              margin: const EdgeInsets.all(15),
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(
-                  color: Colors.grey,
-                  width: 2,
-                ),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    WTexts.dashBoardingTitle3,
-                    style: txtTheme.headlineMedium,
-                    textAlign: TextAlign.left,
-                  ),
-                  const SizedBox(height: WSizes.spaceBtwItems),
-                  Image(
-                    width: 750,
-                    height: 250,
-                    image: AssetImage(WImages.dashBoard3),
-                  ),
-                  const SizedBox(height: WSizes.spaceBtwItems),
-                  Text(
-                    WTexts.dashBoardingSubTitle3,
-                    style: txtTheme.bodySmall,
-                    textAlign: TextAlign.left,
-                  ),
-                  const SizedBox(height: WSizes.spaceBtwItems),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.transparent),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: IconButton(
-                          onPressed: () {},
-                          icon: const Icon( Icons.favorite, color: Colors.red),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              margin: const EdgeInsets.all(15),
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(
-                  color: Colors.grey,
-                  width: 2,
-                ),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    WTexts.dashBoardingTitle4,
-                    style: txtTheme.headlineMedium,
-                    textAlign: TextAlign.left,
-                  ),
-                  const SizedBox(height: WSizes.spaceBtwItems),
-                  Image(
-                    width: 750,
-                    height: 250,
-                    image: AssetImage(WImages.dashBoard4),
-                  ),
-                  const SizedBox(height: WSizes.spaceBtwItems),
-                  Text(
-                    WTexts.dashBoardingSubTitle4,
-                    style: txtTheme.bodySmall,
-                    textAlign: TextAlign.left,
-                  ),
-                  const SizedBox(height: WSizes.spaceBtwItems),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.transparent),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: IconButton(
-                          onPressed: () {},
-                          icon: const Icon( Icons.favorite, color: Colors.red),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              margin: const EdgeInsets.all(15),
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(
-                  color: Colors.grey,
-                  width: 2,
-                ),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    WTexts.dashBoardingTitle5,
-                    style: txtTheme.headlineMedium,
-                    textAlign: TextAlign.left,
-                  ),
-                  const SizedBox(height: WSizes.spaceBtwItems),
-                  Image(
-                    width: 750,
-                    height: 250,
-                    image: AssetImage(WImages.dashBoard5),
-                  ),
-                  const SizedBox(height: WSizes.spaceBtwItems),
-                  Text(
-                    WTexts.dashBoardingSubTitle5,
-                    style: txtTheme.bodySmall,
-                    textAlign: TextAlign.left,
-                  ),
-                  const SizedBox(height: WSizes.spaceBtwItems),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.transparent),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: IconButton(
-                          onPressed: () {},
-                          icon: const Icon( Icons.favorite, color: Colors.red),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
+                    )
+                  : const SizedBox.shrink()),
+
+              // Venues list
+              Obx(() => controller.venues.isEmpty && !controller.isLoading.value
+                  ? _buildEmptyState(context)
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: controller.venues.length,
+                      itemBuilder: (context, index) {
+                        final venue = controller.venues[index];
+                        return DashboardCard(
+                          venue: venue,
+                          onFavoritePressed: () =>
+                              controller.toggleFavorite(venue.venueId),
+                          onCardPressed: () =>
+                              controller.navigateToVenueDetail(venue.venueId),
+                        );
+                      },
+                    )),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSearchBox(
+    BuildContext context,
+    DashboardController controller,
+    TextEditingController searchController,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: WSizes.defaultSpace),
+      child: TextField(
+        controller: searchController,
+        onChanged: (value) {
+          if (value.isEmpty) {
+            controller.clearSearch();
+          } else {
+            controller.searchVenues(value);
+          }
+        },
+        decoration: InputDecoration(
+          hintText: WTexts.search,
+          prefixIcon: Icon(Iconsax.search_normal, color: Colors.grey.shade600),
+          suffixIcon: ValueListenableBuilder<TextEditingValue>(
+            valueListenable: searchController,
+            builder: (context, value, child) {
+              return value.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Iconsax.close_circle),
+                      onPressed: () {
+                        searchController.clear();
+                        controller.clearSearch();
+                      },
+                    )
+                  : const SizedBox.shrink();
+            },
+          ),
+          filled: true,
+          fillColor: Colors.grey.shade50,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15),
+            borderSide: const BorderSide(color: WColors.primary),
+          ),
+        ),
+      ),
+    );
+  }
+  Widget _buildEmptyState(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(WSizes.defaultSpace * 2),
+      child: Column(
+        children: [
+          Icon(
+            Iconsax.search_normal,
+            size: 64,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: WSizes.spaceBtwItems),
+          Text(
+            'Không tìm thấy địa điểm nào',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Colors.grey.shade600,
+                ),
+          ),
+          const SizedBox(height: WSizes.spaceBtwItems / 2),
+          Text(
+            'Thử tìm kiếm với từ khóa khác',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey.shade500,
+                ),
+          ),
+        ],
       ),
     );
   }

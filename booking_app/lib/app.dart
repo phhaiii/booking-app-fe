@@ -1,4 +1,4 @@
-import 'package:booking_app/features/screen/dashboard/dashboard.dart';
+import 'package:booking_app/features/controller/signup_controller.dart';
 import 'package:booking_app/utils/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'features/screen/onboarding/onboarding.dart';
@@ -11,6 +11,7 @@ class App extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Get.put(AuthController());
+    Get.put(SignupController());
     return GetMaterialApp(
       title: 'Wedding App',
       themeMode: ThemeMode.system,

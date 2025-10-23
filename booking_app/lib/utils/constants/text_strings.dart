@@ -2,47 +2,47 @@ class WTexts {
   static const String wAppName = "WedBook";
   //Onboarding Texts
   static const String onboardingTitle1 =
-      "All-in-One Wedding Planning Made Easy";
+      "Tất cả trong một - Lập kế hoạch đám cưới dễ dàng";
   static const String onboardingTitle2 =
-      "Everything You Need to Plan with Confidence";
+      "Mọi thứ bạn cần để lập kế hoạch tự tin";
   static const String onboardingTitle3 =
-      "Your Wedding, Organized & Stress-Free";
+      "Đám cưới của bạn, được tổ chức & không căng thẳng";
 
   static const String onboardingSubtitle1 =
-      "Your Love Story, Perfectly Planned";
+      "Câu chuyện tình yêu của bạn, được lên kế hoạch hoàn hảo";
   static const String onboardingSubtitle2 =
-      "Where Dreams Begin & Details Come True";
-  static const String onboardingSubtitle3 = "Happily Ever After, Made Simple";
+      "Nơi những giấc mơ bắt đầu & những chi tiết trở thành hiện thực";
+  static const String onboardingSubtitle3 = "Hạnh phúc mãi mãi, được thực hiện đơn giản";
 
   //Login Texts
-  static const String firstName = "First Name";
-  static const String lastName = "Last Name";
+  static const String firstName = "Tên";
+  static const String lastName = "Họ";
   static const String email = "Email";
-  static const String username = "Username";
-  static const String password = "Password";
-  static const String forgetPassword = "Forget Password?";
-  static const String newPassword = "New Password";
-  static const String confirmPassword = "Confirm Password";
-  static const String phoneNo = "Phone Number";
-  static const String rememberMe = "Remember Me";
-  static const String signIn = "Sign In";
-  static const String signUp = "Sign Up";
-  static const String dontHaveAnAccount = "Don't have an account?";
-  static const String createAccount = "Create Account";
-  static const String orSignInWith = "Or Sign In with";
-  static const String orSignUpWith = "Or Sign Up with";
-  static const String iAgreeTo = "I agree to";
-  static const String termsAndConditions = "Terms & Conditions";
-  static const String resendEmail = "Resend Email";
-  static const String hintEmail = "Enter your email address";
-  static const String hintPassword = "Enter your password";
-  static const String and = "and";
-  static const String privacyPolicy = "Privacy Policy";
+  static const String username = "Tên người dùng";
+  static const String password = "Mật khẩu";
+  static const String forgetPassword = "Quên mật khẩu?";
+  static const String newPassword = "Mật khẩu mới";
+  static const String confirmPassword = "Xác nhận mật khẩu";
+  static const String phoneNo = "Số điện thoại";
+  static const String rememberMe = "Ghi nhớ tôi";
+  static const String signIn = "Đăng nhập";
+  static const String signUp = "Đăng ký";
+  static const String dontHaveAnAccount = "Bạn chưa có tài khoản?";
+  static const String createAccount = "Tạo tài khoản";
+  static const String orSignInWith = "Hoặc đăng nhập với";
+  static const String orSignUpWith = "Hoặc đăng ký với";
+  static const String iAgreeTo = "Tôi đồng ý với";
+  static const String termsAndConditions = "Điều khoản & Điều kiện";
+  static const String resendEmail = "Gửi lại Email";
+  static const String hintEmail = "Nhập địa chỉ email của bạn";
+  static const String hintPassword = "Nhập mật khẩu của bạn";
+  static const String and = "và";
+  static const String privacyPolicy = "Chính sách bảo mật";
 
-  static const String loginTitle = "Welcome Back";
-  static const String loginSubTitle = "Login to your account to continue";
-  static const String signupTitle = "Let's Make Your Account!";
-  static const String signupSubTitle = "Create your account to continue";
+  static const String loginTitle = "Chào mừng bạn trở lại";
+  static const String loginSubTitle = "Đăng nhập vào tài khoản của bạn để tiếp tục";
+  static const String signupTitle = "Hãy tạo tài khoản của bạn!";
+  static const String signupSubTitle = "Tạo tài khoản của bạn để tiếp tục";
 
   static const String dashBoardingTitle = "Melia Hanoi Hotel";
   static const String dashBoardingTitle1 = "Sheraton Hanoi Hotel";
@@ -59,9 +59,9 @@ class WTexts {
   static const String dashBoardingSubTitle4 = "Trung tâm hội nghị Quốc Gia nằm tại ngã tư Đại lộ Thăng long giao với đường Phạm Hùng, được mệnh danh là tòa nhà đa năng với lối kiến trúc hiện đại kết hợp với văn hoá dân tộc Việt Nam. Trung tâm hội nghị Quốc Gia sẽ là một địa điểm vô cùng lý tưởng khi các cặp đôi muốn ghi lại dấu ấn trong ngày trọng đại của mình.";
   static const String dashBoardingSubTitle5 = "Trống Đồng Palace được biết tới là hệ thống trung tâm tiệc cưới có dịch vụ chuyên nghiệp và chu đáo nhất Hà Nội, sở hữu chuỗi nhà hàng ở toàn những vị trí đắc địa như: Hoàn Kiếm, Tây Hồ, Thanh Xuân,...sẽ là một địa điểm đáng để gửi gắm ngày trọng đại của lứa đôi.";
 
-  static const String chat = 'talk with us';
-  static const String book = 'book us';
-  static const String search = 'Search...';
+  static const String chat = 'Trò chuyện với chúng tôi';
+  static const String book = 'Đặt chỗ với chúng tôi';
+  static const String search = 'Tìm kiếm...';
 
-  static const String profile = 'Profile';
+  static const String profile = 'Hồ sơ';
 }

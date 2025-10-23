@@ -1,6 +1,6 @@
 import 'package:booking_app/features/screen/signup/signup.dart';
 import 'package:booking_app/features/controller/auth_controller.dart';
-import 'package:booking_app/navigation_menu.dart';
+import 'package:booking_app/utils/constants/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:booking_app/utils/constants/text_strings.dart';
 import 'package:booking_app/utils/constants/sizes.dart';
@@ -75,7 +75,7 @@ class WLoginForm extends StatelessWidget {
                   onPressed: () {
                     // TODO: Navigate to forgot password screen
                   },
-                  child: Text(WTexts.forgetPassword),
+                  child: Text(WTexts.forgetPassword, style: TextStyle(color: WColors.primary)),
                 ),
               ],
             ),
@@ -90,7 +90,7 @@ class WLoginForm extends StatelessWidget {
 //                 )),
                   onPressed:
                       controller.isLoading.value ? null : controller.login,
-                  child: controller.isLoading.value
+                      child: controller.isLoading.value
                       ? SizedBox(
                           height: 20,
                           width: 20,
