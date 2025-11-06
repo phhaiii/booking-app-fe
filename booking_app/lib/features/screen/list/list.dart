@@ -1,12 +1,12 @@
 import 'package:booking_app/features/screen/list/budget_screen.dart';
 import 'package:booking_app/features/screen/list/calendar_screen.dart';
-import 'package:booking_app/features/screen/list/clothing_screen.dart';
-import 'package:booking_app/features/screen/list/photography_screen.dart';
+import 'package:booking_app/features/screen/list/check_list_screen.dart';
+import 'package:booking_app/features/screen/list/bookingmanage_screen.dart'; 
+import 'package:booking_app/features/screen/createpost/createpost_screen.dart'; 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:booking_app/utils/constants/colors.dart';
-import 'package:booking_app/utils/constants/sizes.dart';
 
 class ListScreen extends StatelessWidget {
   const ListScreen({super.key});
@@ -42,7 +42,7 @@ class ListScreen extends StatelessWidget {
     return [
       PlanningItemData(
         icon: Iconsax.calendar,
-        title: 'Đặt lịch hẹn',
+        title: 'Lịch hẹn',
         subtitle: 'Lên lịch các sự kiện cưới và cuộc hẹn',
         color: Colors.blue,
         onTap: () => Get.to(() => const CalendarScreen()),
@@ -55,18 +55,27 @@ class ListScreen extends StatelessWidget {
         onTap: () => Get.to(() => const BudgetScreen()),
       ),
       PlanningItemData(
-        icon: Iconsax.shopping_bag,
-        title: 'Trang phục',
-        subtitle: 'Váy cưới, áo dài và phụ kiện',
-        color: Colors.purple,
-        onTap: () => Get.to(() => const ClothingScreen()),
-      ),
-      PlanningItemData(
-        icon: Iconsax.camera,
-        title: 'Gói chụp ảnh',
-        subtitle: 'Chọn photographer và gói chụp ảnh cưới',
+        icon: Iconsax.task_square,
+        title: 'Check list',
+        subtitle: 'Những điều cần làm cho đám cưới',
         color: Colors.orange,
-        onTap: () => Get.to(() => const PhotographyScreen()),
+        onTap: () => Get.to(() => const CheckListScreen()),
+      ),
+      // THÊM MỚI - Quản lý đặt lịch
+      PlanningItemData(
+        icon: Iconsax.receipt_edit,
+        title: 'Quản lý đặt lịch',
+        subtitle: 'Xem và xử lý các yêu cầu đặt lịch từ khách hàng',
+        color: Colors.purple,
+        onTap: () => Get.to(() => const BookingManagementScreen()),
+      ),
+      // THÊM MỚI - Tạo bài viết
+      PlanningItemData(
+        icon: Iconsax.document_text,
+        title: 'Tạo bài viết',
+        subtitle: 'Viết và chia sẻ bài viết về dịch vụ cưới',
+        color: Colors.teal,
+        onTap: () => Get.to(() => const CreatePostScreen()),
       ),
     ];
   }

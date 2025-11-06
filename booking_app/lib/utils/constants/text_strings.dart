@@ -2,7 +2,7 @@ class WTexts {
   static const String wAppName = "WedBook";
   //Onboarding Texts
   static const String onboardingTitle1 =
-      "Tất cả trong một - Lập kế hoạch đám cưới dễ dàng";
+      "Tất cả trong một \n     Lập kế hoạch đám cưới dễ dàng";
   static const String onboardingTitle2 =
       "Mọi thứ bạn cần để lập kế hoạch tự tin";
   static const String onboardingTitle3 =

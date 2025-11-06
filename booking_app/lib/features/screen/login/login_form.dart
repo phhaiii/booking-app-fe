@@ -1,18 +1,17 @@
 import 'package:booking_app/features/screen/signup/signup.dart';
-import 'package:booking_app/features/controller/auth_controller.dart';
+import 'package:booking_app/features/controller/login_controller.dart';
 import 'package:booking_app/utils/constants/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:booking_app/utils/constants/text_strings.dart';
 import 'package:booking_app/utils/constants/sizes.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:get/get.dart';
-
+import 'package:booking_app/features/screen/login/forgot_password.dart';
 class WLoginForm extends StatelessWidget {
   const WLoginForm({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
     final controller = Get.find<AuthController>();
 
     return Form(
@@ -72,9 +71,7 @@ class WLoginForm extends StatelessWidget {
                 ),
                 // Forgot password
                 TextButton(
-                  onPressed: () {
-                    // TODO: Navigate to forgot password screen
-                  },
+                  onPressed: () => Get.to(() => const ForgotPasswordScreen()),
                   child: Text(WTexts.forgetPassword, style: TextStyle(color: WColors.primary)),
                 ),
               ],

@@ -1,12 +1,10 @@
 import 'package:booking_app/features/screen/chat/chat_ui.dart';
 import 'package:booking_app/features/screen/list/list.dart';
 import 'package:booking_app/features/screen/dashboard/dashboard.dart';
-import 'package:booking_app/utils/helpers/helpers.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:booking_app/features/screen/notification/notification_screen.dart';
-import 'package:booking_app/features/screen/user/customer.dart';
 
 
 class NavigationMenu extends StatelessWidget {
@@ -15,7 +13,6 @@ class NavigationMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(NavigationController());
-    final dark = WHelpersFunctions.isDarkMode(context);
 
     return Scaffold(
       bottomNavigationBar: Obx(
@@ -29,8 +26,6 @@ class NavigationMenu extends StatelessWidget {
             NavigationDestination(icon: Icon(Iconsax.activity), label: 'Chat'),
             NavigationDestination(icon: Icon(Iconsax.notification), label: 'Notifications'),
             NavigationDestination(icon: Icon(Iconsax.category), label: 'Check list'),
-            NavigationDestination(icon: Icon(Iconsax.user), label: 'Mine'),
-
           ],
         ),
       ),
@@ -47,6 +42,5 @@ class NavigationController extends GetxController {
     const ChatUIScreen(),
     const NotificationScreen(),
     const ListScreen(),
-    const CustomerOrdersScreen(orders: []),
   ];
 }

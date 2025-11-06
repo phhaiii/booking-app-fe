@@ -4,7 +4,7 @@ import 'package:booking_app/service/storage_service.dart';
 
 class ApiService {
   // Địa chỉ backend của bạn
-  static const String baseUrl = 'http://10.0.2.2:8088/api';
+  static const String baseUrl = 'http://10.0.2.2:8089/api';
 
   // Headers mặc định
   static Map<String, String> get headers => {
@@ -27,18 +27,18 @@ class ApiService {
       {Map<String, String>? customHeaders}) async {
     try {
       final headers = customHeaders ?? await authHeaders;
-      
+
       print('🌐 GET Request: $baseUrl$endpoint');
       print('📤 Headers: $headers');
-      
+
       final response = await http.get(
         Uri.parse('$baseUrl$endpoint'),
         headers: headers,
       );
-      
+
       print('📥 GET Response: ${response.statusCode}');
       print('📥 Response Body: ${response.body}');
-      
+
       return _handleResponse(response);
     } catch (e) {
       print('🚨 GET Error: $e');
@@ -54,20 +54,20 @@ class ApiService {
   }) async {
     try {
       final headers = customHeaders ?? await authHeaders;
-      
+
       print('🌐 POST Request: $baseUrl$endpoint');
       print('📤 Headers: $headers');
       print('📤 Body: ${jsonEncode(body)}');
-      
+
       final response = await http.post(
         Uri.parse('$baseUrl$endpoint'),
         headers: headers,
         body: jsonEncode(body),
       );
-      
+
       print('📥 POST Response: ${response.statusCode}');
       print('📥 Response Body: ${response.body}');
-      
+
       return _handleResponse(response);
     } catch (e) {
       print('🚨 POST Error: $e');
@@ -83,20 +83,20 @@ class ApiService {
   }) async {
     try {
       final headers = customHeaders ?? await authHeaders;
-      
+
       print('🌐 PUT Request: $baseUrl$endpoint');
       print('📤 Headers: $headers');
       print('📤 Body: ${body != null ? jsonEncode(body) : 'null'}');
-      
+
       final response = await http.put(
         Uri.parse('$baseUrl$endpoint'),
         headers: headers,
         body: body != null ? jsonEncode(body) : null,
       );
-      
+
       print('📥 PUT Response: ${response.statusCode}');
       print('📥 Response Body: ${response.body}');
-      
+
       return _handleResponse(response);
     } catch (e) {
       print('🚨 PUT Error: $e');
@@ -109,18 +109,18 @@ class ApiService {
       {Map<String, String>? customHeaders}) async {
     try {
       final headers = customHeaders ?? await authHeaders;
-      
+
       print('🌐 DELETE Request: $baseUrl$endpoint');
       print('📤 Headers: $headers');
-      
+
       final response = await http.delete(
         Uri.parse('$baseUrl$endpoint'),
         headers: headers,
       );
-      
+
       print('📥 DELETE Response: ${response.statusCode}');
       print('📥 Response Body: ${response.body}');
-      
+
       return _handleResponse(response);
     } catch (e) {
       print('🚨 DELETE Error: $e');
@@ -131,7 +131,7 @@ class ApiService {
   // Xử lý response
   static dynamic _handleResponse(http.Response response) {
     print('🔍 Processing response: ${response.statusCode}');
-    
+
     if (response.body.isEmpty) {
       print('❌ Empty response body');
       throw Exception('Server không trả về dữ liệu');
@@ -150,7 +150,8 @@ class ApiService {
           print('❌ Bad Request: $message');
           throw Exception(message);
         case 401:
-          final message = jsonResponse['message'] ?? 'Phiên đăng nhập đã hết hạn';
+          final message =
+              jsonResponse['message'] ?? 'Phiên đăng nhập đã hết hạn';
           print('❌ Unauthorized: $message');
           throw Exception(message);
         case 403:
@@ -158,7 +159,8 @@ class ApiService {
           print('❌ Forbidden: $message');
           throw Exception(message);
         case 404:
-          final message = jsonResponse['message'] ?? 'Không tìm thấy tài nguyên';
+          final message =
+              jsonResponse['message'] ?? 'Không tìm thấy tài nguyên';
           print('❌ Not Found: $message');
           throw Exception(message);
         case 500:
@@ -185,16 +187,16 @@ class ApiService {
     try {
       print('🌐 POST No Auth Request: $baseUrl$endpoint');
       print('📤 Body: ${jsonEncode(body)}');
-      
+
       final response = await http.post(
         Uri.parse('$baseUrl$endpoint'),
         headers: headers,
         body: jsonEncode(body),
       );
-      
+
       print('📥 POST No Auth Response: ${response.statusCode}');
       print('📥 Response Body: ${response.body}');
-      
+
       return _handleResponse(response);
     } catch (e) {
       print('🚨 POST No Auth Error: $e');
@@ -230,11 +232,13 @@ class ApiService {
   // Test connection
   static Future<bool> testConnection() async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/health'),
-        headers: headers,
-      ).timeout(const Duration(seconds: 5));
-      
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/health'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 5));
+
       return response.statusCode == 200;
     } catch (e) {
       print('🚨 Connection test failed: $e');

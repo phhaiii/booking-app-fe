@@ -1,11 +1,11 @@
+import 'package:booking_app/models/venuedetail_response.dart';
 import 'package:booking_app/utils/constants/colors.dart';
 import 'package:booking_app/utils/constants/sizes.dart';
-import 'package:booking_app/formatter/venue/venue_model.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 
 class DashboardCard extends StatelessWidget {
-  final VenueModel venue;
+  final VenueDetailResponse venue;
   final VoidCallback? onFavoritePressed;
   final VoidCallback? onCardPressed;
 
@@ -15,27 +15,6 @@ class DashboardCard extends StatelessWidget {
     this.onFavoritePressed,
     this.onCardPressed,
   });
-
-  // Legacy constructor for backward compatibility
-  const DashboardCard.legacy({
-    super.key,
-    required String title,
-    required String subtitle,
-    required String imagePath,
-    required bool isFavorite,
-    this.onFavoritePressed,
-    this.onCardPressed,
-  }) : venue = const VenueModel(
-          venueId: '',
-          title: '',
-          subtitle: '',
-          imagePath: '',
-          location: '',
-          price: 0,
-          amenities: [],
-          rating: 0,
-          reviewCount: 0,
-        );
 
   @override
   Widget build(BuildContext context) {
@@ -76,7 +55,7 @@ class DashboardCard extends StatelessWidget {
             ),
             const SizedBox(height: WSizes.spaceBtwItems),
 
-            // Image
+            // Image with better error handling
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Image.asset(
@@ -92,10 +71,23 @@ class DashboardCard extends StatelessWidget {
                       color: Colors.grey.shade200,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(
-                      Icons.image_not_supported,
-                      size: 50,
-                      color: Colors.grey,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.image_not_supported,
+                          size: 50,
+                          color: Colors.grey.shade400,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Ảnh không khả dụng',
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
                   );
                 },
@@ -137,7 +129,7 @@ class DashboardCard extends StatelessWidget {
                       const Icon(Iconsax.star1, size: 14, color: Colors.orange),
                       const SizedBox(width: 4),
                       Text(
-                        venue.rating.toString(),
+                        venue.rating.toStringAsFixed(1),
                         style: txtTheme.bodySmall?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: Colors.orange.shade700,
@@ -155,14 +147,14 @@ class DashboardCard extends StatelessWidget {
               TextSpan(
                 children: [
                   TextSpan(
-                    text: '${venue.price.toStringAsFixed(0)}đ',
+                    text: _formatPrice(venue.price),
                     style: txtTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: WColors.primary,
                     ),
                   ),
                   TextSpan(
-                    text: ' / giờ',
+                    text: ' / tiệc',
                     style: txtTheme.bodySmall?.copyWith(
                       color: Colors.grey.shade600,
                     ),
@@ -210,6 +202,19 @@ class DashboardCard extends StatelessWidget {
               ),
             const SizedBox(height: WSizes.spaceBtwItems),
 
+            // Review count
+            if (venue.reviewCount > 0)
+              Padding(
+                padding:
+                    const EdgeInsets.only(bottom: WSizes.spaceBtwItems / 2),
+                child: Text(
+                  '${venue.reviewCount} đánh giá',
+                  style: txtTheme.bodySmall?.copyWith(
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ),
+
             // Action Row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -246,7 +251,6 @@ class DashboardCard extends StatelessWidget {
                   style: TextButton.styleFrom(
                     backgroundColor: WColors.primary.withOpacity(0.1),
                     foregroundColor: WColors.primary,
-                    overlayColor: WColors.primary.withOpacity(0.1),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                     ),
@@ -262,5 +266,20 @@ class DashboardCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // Helper method to format price
+  String _formatPrice(double price) {
+    if (price >= 1000000) {
+      double millions = price / 1000000;
+      if (millions == millions.toInt()) {
+        return '${millions.toInt()} triệu';
+      } else {
+        return '${millions.toStringAsFixed(1)} triệu';
+      }
+    } else if (price >= 1000) {
+      return '${(price / 1000).toStringAsFixed(0)}K';
+    }
+    return '${price.toStringAsFixed(0)}đ';
   }
 }

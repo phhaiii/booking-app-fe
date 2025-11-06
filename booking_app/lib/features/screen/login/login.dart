@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:booking_app/utils/constants/sizes.dart';
 import 'package:booking_app/features/screen/login/login_header.dart';
 import 'package:booking_app/features/screen/login/login_form.dart';
-import 'package:booking_app/features/controller/auth_controller.dart';
+import 'package:booking_app/features/controller/login_controller.dart';
 import 'package:get/get.dart';
 import 'package:booking_app/common/widgets.login_signup/form_divider.dart';
 import 'package:booking_app/common/widgets.login_signup/social_button.dart';

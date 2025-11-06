@@ -3,7 +3,7 @@ import 'package:booking_app/utils/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'features/screen/onboarding/onboarding.dart';
 import 'package:get/get.dart';
-import 'package:booking_app/features/controller/auth_controller.dart';
+import 'package:booking_app/features/controller/login_controller.dart';
 
 class App extends StatelessWidget {
   const App({super.key});

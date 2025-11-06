@@ -4,7 +4,6 @@ import 'package:booking_app/features/controller/signup_controller.dart';
 import 'package:booking_app/features/screen/signup/signup_form.dart';
 import 'package:booking_app/utils/constants/sizes.dart';
 import 'package:booking_app/utils/constants/text_strings.dart';
-import 'package:booking_app/utils/helpers/helpers.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 

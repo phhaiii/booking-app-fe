@@ -16,9 +16,12 @@ dependencies:
   table_calendar: ^3.0.9
   stomp_dart_client: 0.4.4
   web_socket_channel: ^2.4.0
+  image_picker: ^1.0.4
 
-  
-  
+  #google
+  google_sign_in: ^6.2.1
+  firebase_auth: ^5.3.1
+  firebase_core: ^3.4.0
 
   # Utility Packages
   http: ^1.5.0
@@ -38,6 +41,7 @@ dependencies:
   get: ^4.6.5
   get_storage: ^2.0.3
   shared_preferences: ^2.5.3
+  uuid: ^4.5.2
   
   
   
@@ -95,24 +99,24 @@ flutter:
         - asset: assets/fonts/PlayfairDisplay-BlackItalic.ttf
           weight: 900
           style: italic
-  
 
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:booking_app/service/api.dart';
 import 'package:booking_app/service/storage_service.dart';
 import 'package:booking_app/navigation_menu.dart';
-import 'package:booking_app/models/api_response.dart';
 import 'package:booking_app/models/auth_response.dart';
 import 'package:booking_app/models/register_request.dart';
 import 'dart:convert';
