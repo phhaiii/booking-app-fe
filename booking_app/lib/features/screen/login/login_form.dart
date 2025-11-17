@@ -70,10 +70,10 @@ class WLoginForm extends StatelessWidget {
                   ],
                 ),
                 // Forgot password
-                TextButton(
-                  onPressed: () => Get.to(() => const ForgotPasswordScreen()),
-                  child: Text(WTexts.forgetPassword, style: TextStyle(color: WColors.primary)),
-                ),
+                // TextButton(
+                //   onPressed: () => Get.to(() => const ForgotPasswordScreen()),
+                //   child: Text(WTexts.forgetPassword, style: TextStyle(color: WColors.primary)),
+                // ),
               ],
             ),
             const SizedBox(height: WSizes.spaceBtwSections),

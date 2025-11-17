@@ -315,8 +315,8 @@ class CheckListCard extends StatelessWidget {
               '⚠️ Lỗi',
               'Vui lòng nhập tiêu đề',
               snackPosition: SnackPosition.TOP,
-              backgroundColor: Colors.orange.withOpacity(0.1),
-              colorText: Colors.orange,
+              backgroundColor: Colors.orange.shade50,
+              colorText: Colors.orange.shade900,
             );
             return;
           }

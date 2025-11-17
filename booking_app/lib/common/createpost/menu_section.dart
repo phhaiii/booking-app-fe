@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:booking_app/utils/constants/colors.dart';
 import 'package:booking_app/utils/constants/sizes.dart';
 import 'package:booking_app/features/controller/createpost_controller.dart';
-import 'package:booking_app/formatter/venue/menu_item.dart';
+import 'package:booking_app/model/menu_model.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:get/get.dart';
-import 'package:uuid/uuid.dart';
 
 class MenuSection extends StatelessWidget {
   final CreatePostController controller;
@@ -109,7 +108,7 @@ class MenuSection extends StatelessWidget {
     );
   }
 
-  Widget _buildMenuCard(MenuItem menu, int index) {
+  Widget _buildMenuCard(MenuModel menu, int index) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -160,11 +159,10 @@ class MenuSection extends StatelessWidget {
                           color: WColors.primary,
                         ),
                       ),
-                      if (menu.description != null &&
-                          menu.description!.isNotEmpty) ...[
+                      if (menu.description.isNotEmpty) ...[
                         const SizedBox(height: 2),
                         Text(
-                          menu.description!,
+                          menu.description,
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade600,
@@ -176,7 +174,8 @@ class MenuSection extends StatelessWidget {
                 ),
                 IconButton(
                   icon: const Icon(Iconsax.edit, size: 18),
-                  onPressed: () => _showEditMenuDialog(Get.context!, menu, index),
+                  onPressed: () =>
+                      _showEditMenuDialog(Get.context!, menu, index),
                   color: Colors.blue,
                 ),
                 IconButton(
@@ -194,13 +193,13 @@ class MenuSection extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Price & Guests
+                // Price & Guests - UPDATED
                 Row(
                   children: [
                     Expanded(
                       child: _buildInfoChip(
                         icon: Iconsax.money,
-                        label: 'Giá',
+                        label: 'Giá/bàn',
                         value: _formatPrice(menu.price),
                         color: Colors.green,
                       ),
@@ -209,12 +208,51 @@ class MenuSection extends StatelessWidget {
                     Expanded(
                       child: _buildInfoChip(
                         icon: Iconsax.people,
-                        label: 'Số người/bàn',
-                        value: '${menu.guestsPerTable} khách',
+                        label: 'Khách/bàn',
+                        value: '${menu.guestsPerTable} người',
                         color: Colors.blue,
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 12),
+
+                // Price per person (calculated)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Iconsax.wallet_money,
+                              size: 16, color: Colors.orange),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Giá/người:',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.orange.shade700,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        _formatPrice(menu.pricePerPerson),
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 12),
 
@@ -237,17 +275,17 @@ class MenuSection extends StatelessWidget {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.1),
+                        color: Colors.purple.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: Colors.orange.withOpacity(0.3),
+                          color: Colors.purple.withOpacity(0.3),
                         ),
                       ),
                       child: Text(
                         dish,
                         style: const TextStyle(
                           fontSize: 12,
-                          color: Colors.orange,
+                          color: Colors.purple,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -351,18 +389,20 @@ class MenuSection extends StatelessWidget {
     _showMenuDialog(context, null, null);
   }
 
-  void _showEditMenuDialog(BuildContext context, MenuItem menu, int index) {
+  void _showEditMenuDialog(BuildContext context, MenuModel menu, int index) {
     _showMenuDialog(context, menu, index);
   }
 
-  void _showMenuDialog(BuildContext context, MenuItem? existingMenu, int? index) {
-    final nameController = TextEditingController(text: existingMenu?.name ?? '');
+  void _showMenuDialog(
+      BuildContext context, MenuModel? existingMenu, int? index) {
+    final nameController =
+        TextEditingController(text: existingMenu?.name ?? '');
     final descController =
         TextEditingController(text: existingMenu?.description ?? '');
     final priceController =
         TextEditingController(text: existingMenu?.price.toString() ?? '');
     final guestsController = TextEditingController(
-        text: existingMenu?.guestsPerTable.toString() ?? '');
+        text: existingMenu?.guestsPerTable.toString() ?? '10');
     final dishController = TextEditingController();
     final dishes = <String>[].obs;
 
@@ -388,8 +428,7 @@ class MenuSection extends StatelessWidget {
                         color: WColors.primary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(Iconsax.note_1,
-                          color: WColors.primary),
+                      child: const Icon(Iconsax.note_1, color: WColors.primary),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -447,13 +486,18 @@ class MenuSection extends StatelessWidget {
                         keyboardType: TextInputType.number,
                         decoration: InputDecoration(
                           labelText: 'Giá/bàn *',
-                          hintText: '0',
+                          hintText: '15000000',
                           prefixIcon: const Icon(Iconsax.money),
                           suffixText: 'VNĐ',
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
+                        // ✅ THÊM: Listen to changes để update calculated price
+                        onChanged: (value) {
+                          // Trigger rebuild for Obx
+                          priceController.text = value;
+                        },
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -463,16 +507,68 @@ class MenuSection extends StatelessWidget {
                         keyboardType: TextInputType.number,
                         decoration: InputDecoration(
                           labelText: 'Số khách/bàn *',
-                          hintText: '0',
+                          hintText: '10',
                           prefixIcon: const Icon(Iconsax.people),
-                          suffixText: 'khách',
+                          suffixText: 'người',
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
+                        // ✅ THÊM: Listen to changes
+                        onChanged: (value) {
+                          guestsController.text = value;
+                        },
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 16),
+
+                // Show calculated price per person
+                // ✅ FIX: Remove Obx, just show static calculated value
+                Builder(
+                  builder: (context) {
+                    final price = double.tryParse(priceController.text) ?? 0;
+                    final guests = int.tryParse(guestsController.text) ?? 10;
+                    final pricePerPerson = guests > 0 ? price / guests : 0.0;
+
+                    return Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border:
+                            Border.all(color: Colors.orange.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Iconsax.calculator,
+                                  size: 16, color: Colors.orange),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Giá ước tính/người:',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.orange.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            _formatPrice(pricePerPerson),
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 24),
 
@@ -498,7 +594,6 @@ class MenuSection extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
 
-                // Add dish input
                 Row(
                   children: [
                     Expanded(
@@ -547,43 +642,45 @@ class MenuSection extends StatelessWidget {
                 const SizedBox(height: 12),
 
                 // Dishes list
-                Obx(() => dishes.isEmpty
-                    ? Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey.shade200),
+                Obx(() {
+                  if (dishes.isEmpty) {
+                    return Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Center(
+                        child: Text(
+                          'Chưa có món ăn nào',
+                          style: TextStyle(color: Colors.grey.shade500),
                         ),
-                        child: Center(
-                          child: Text(
-                            'Chưa có món ăn nào',
-                            style: TextStyle(color: Colors.grey.shade500),
-                          ),
-                        ),
-                      )
-                    : Container(
-                        constraints: const BoxConstraints(maxHeight: 150),
-                        child: SingleChildScrollView(
-                          child: Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: dishes.map((dish) {
-                              return Chip(
-                                label: Text(dish),
-                                deleteIcon:
-                                    const Icon(Icons.close, size: 16),
-                                onDeleted: () => dishes.remove(dish),
-                                backgroundColor:
-                                    Colors.orange.withOpacity(0.1),
-                                side: BorderSide(
-                                  color: Colors.orange.withOpacity(0.3),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      )),
+                      ),
+                    );
+                  }
+
+                  return Container(
+                    constraints: const BoxConstraints(maxHeight: 150),
+                    child: SingleChildScrollView(
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: dishes.map((dish) {
+                          return Chip(
+                            label: Text(dish),
+                            deleteIcon: const Icon(Icons.close, size: 16),
+                            onDeleted: () => dishes.remove(dish),
+                            backgroundColor: Colors.orange.withOpacity(0.1),
+                            side: BorderSide(
+                              color: Colors.orange.withOpacity(0.3),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  );
+                }),
                 const SizedBox(height: 24),
 
                 // Action Buttons
@@ -620,18 +717,27 @@ class MenuSection extends StatelessWidget {
                             return;
                           }
                           if (dishes.isEmpty) {
-                            Get.snackbar('Lỗi', 'Vui lòng thêm ít nhất 1 món ăn');
+                            Get.snackbar(
+                                'Lỗi', 'Vui lòng thêm ít nhất 1 món ăn');
                             return;
                           }
 
-                          final menuItem = MenuItem(
-                            id: existingMenu?.id ?? const Uuid().v4(),
+                          // ✅ FIX: Explicitly cast to double
+                          final price =
+                              double.parse(priceController.text.trim());
+                          final guestsPerTable =
+                              int.parse(guestsController.text.trim());
+                          final pricePerPerson =
+                              (price / guestsPerTable).toDouble();
+
+                          final menuItem = MenuModel(
+                            id: existingMenu?.id,
                             name: nameController.text.trim(),
                             description: descController.text.trim(),
-                            price: double.parse(priceController.text.trim()),
-                            guestsPerTable:
-                                int.parse(guestsController.text.trim()),
-                            dishes: dishes.toList(),
+                            price: price,
+                            guestsPerTable: guestsPerTable,
+                            pricePerPerson: pricePerPerson,
+                            items: dishes.toList(),
                           );
 
                           if (existingMenu == null) {

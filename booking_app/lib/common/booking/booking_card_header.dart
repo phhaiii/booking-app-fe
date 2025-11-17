@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:booking_app/models/booking_response.dart';
+import 'package:booking_app/response/booking_response.dart';
 import 'package:booking_app/utils/helpers/booking_helper.dart';
 import 'booking_status_badge.dart';
 

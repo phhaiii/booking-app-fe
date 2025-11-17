@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:booking_app/service/websocket_service.dart';
 import 'package:booking_app/service/api.dart';
 import 'package:booking_app/service/storage_service.dart';
-import 'package:booking_app/models/message_response.dart';
-import 'package:booking_app/models/conversation_response.dart';
-import 'package:booking_app/models/api_response.dart';
+import 'package:booking_app/response/message_response.dart';
+import 'package:booking_app/response/conversation_response.dart';
+import 'package:booking_app/response/api_response.dart';
 
 class ChatController extends GetxController {
   late WebSocketService _webSocketService;
-  
+
   // Observable variables
   final messages = <MessageResponse>[].obs;
   final conversations = <ConversationResponse>[].obs;
@@ -17,11 +17,11 @@ class ChatController extends GetxController {
   final isConnected = false.obs;
   final connectionStatus = 'disconnected'.obs;
   final currentConversationId = Rx<int?>(null);
-  
+
   // Controllers
   final messageController = TextEditingController();
   final scrollController = ScrollController();
-  
+
   // Current user info
   String? currentUserId;
   String? currentUserEmail;
@@ -37,7 +37,7 @@ class ChatController extends GetxController {
   Future<void> _initializeUser() async {
     currentUserId = await StorageService.getUserId();
     currentUserEmail = await StorageService.getEmail();
-    print('👤 Current user: $currentUserId ($currentUserEmail)');
+    print('Current user: $currentUserId ($currentUserEmail)');
   }
 
   Future<void> _initializeWebSocket() async {
@@ -59,16 +59,16 @@ class ChatController extends GetxController {
   void _handleNewMessage(Map<String, dynamic> messageData) {
     try {
       final message = MessageResponse.fromJson(messageData);
-      
+
       // Add message to current conversation if it matches
       if (currentConversationId.value == message.conversationId) {
         messages.add(message);
         _scrollToBottom();
       }
-      
+
       // Update conversation list
       _updateConversationWithNewMessage(message);
-      
+
       print('New message received: ${message.messageText}');
     } catch (e) {
       print(' Error handling new message: $e');
@@ -79,12 +79,12 @@ class ChatController extends GetxController {
     connectionStatus.value = status;
     isConnected.value = status == 'connected';
     print(' Connection status: $status');
-    
+
     if (status == 'connected') {
       Get.snackbar(
         'Kết nối thành công',
         'Đã kết nối tới chat server',
-        backgroundColor: Colors.green.withOpacity(0.1),
+        backgroundColor: Colors.transparent,
         colorText: Colors.green,
         duration: const Duration(seconds: 2),
       );
@@ -112,16 +112,20 @@ class ChatController extends GetxController {
   Future<void> loadConversations() async {
     try {
       isLoading.value = true;
-      
+
+      // ✅ Không cần truyền queryParameters
       final response = await ApiService.get('/chat/conversations');
+
       final apiResponse = ApiResponse<List<ConversationResponse>>.fromJson(
         response,
-        (data) => (data as List).map((item) => ConversationResponse.fromJson(item)).toList(),
+        (data) => (data as List)
+            .map((item) => ConversationResponse.fromJson(item))
+            .toList(),
       );
 
       if (apiResponse.success && apiResponse.data != null) {
         conversations.value = apiResponse.data!;
-        print('✅ Loaded ${conversations.length} conversations');
+        print('Loaded ${conversations.length} conversations');
       }
     } catch (e) {
       print('Error loading conversations: $e');
@@ -141,20 +145,23 @@ class ChatController extends GetxController {
     try {
       isLoading.value = true;
       currentConversationId.value = conversationId;
-      
-      final response = await ApiService.get('/chat/conversations/$conversationId/messages');
+
+      // ✅ Không cần truyền queryParameters
+      final response = await ApiService.get(
+        '/chat/conversations/$conversationId/messages',
+      );
+
       final apiResponse = ApiResponse<List<MessageResponse>>.fromJson(
         response,
-        (data) => (data as List).map((item) => MessageResponse.fromJson(item)).toList(),
+        (data) => (data as List)
+            .map((item) => MessageResponse.fromJson(item))
+            .toList(),
       );
 
       if (apiResponse.success && apiResponse.data != null) {
-        messages.value = apiResponse.data!.reversed.toList(); // Reverse to show oldest first
+        messages.value = apiResponse.data!.reversed.toList();
         _scrollToBottom();
-        
-        // Mark messages as read
         markAsRead(conversationId);
-        
         print('Loaded ${messages.length} messages');
       }
     } catch (e) {
@@ -206,29 +213,28 @@ class ChatController extends GetxController {
   Future<ConversationResponse?> getOrCreateConversation(int adminId) async {
     try {
       isLoading.value = true;
-      
+
+      // ✅ body is now optional, just pass the data
       final response = await ApiService.post(
-        '/chat/conversations', 
-        body: {'adminId': adminId}
+        '/chat/conversations',
+        body: {'adminId': adminId},
       );
-      
+
       final apiResponse = ApiResponse<ConversationResponse>.fromJson(
         response,
         (data) => ConversationResponse.fromJson(data),
       );
 
       if (apiResponse.success && apiResponse.data != null) {
-        // Add to conversations list if not exists
-        final existingIndex = conversations.indexWhere(
-          (conv) => conv.id == apiResponse.data!.id
-        );
-        
+        final existingIndex =
+            conversations.indexWhere((conv) => conv.id == apiResponse.data!.id);
+
         if (existingIndex == -1) {
           conversations.insert(0, apiResponse.data!);
         } else {
           conversations[existingIndex] = apiResponse.data!;
         }
-        
+
         return apiResponse.data;
       }
     } catch (e) {
@@ -259,21 +265,20 @@ class ChatController extends GetxController {
   }
 
   void _updateConversationWithNewMessage(MessageResponse message) {
-    final index = conversations.indexWhere(
-      (conv) => conv.id == message.conversationId
-    );
-    
+    final index =
+        conversations.indexWhere((conv) => conv.id == message.conversationId);
+
     if (index != -1) {
       final updatedConv = conversations[index].copyWith(
         lastMessage: message.messageText,
         lastMessageAt: message.createdAt,
-        unreadCount: currentConversationId.value == message.conversationId 
-          ? 0 
-          : (conversations[index].unreadCount ?? 0) + 1,
+        unreadCount: currentConversationId.value == message.conversationId
+            ? 0
+            : (conversations[index].unreadCount ?? 0) + 1,
       );
-      
+
       conversations[index] = updatedConv;
-      
+
       // Move to top of list
       conversations.removeAt(index);
       conversations.insert(0, updatedConv);

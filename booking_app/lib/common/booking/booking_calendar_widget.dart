@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:booking_app/features/controller/booking_controller.dart';
-import 'package:booking_app/models/booking_response.dart';
+import 'package:booking_app/response/booking_response.dart';
 import 'package:booking_app/utils/constants/colors.dart';
 
 class BookingCalendarWidget extends StatelessWidget {

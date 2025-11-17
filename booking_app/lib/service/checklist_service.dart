@@ -1,6 +1,6 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:booking_app/models/checklist_response.dart';
+import 'package:booking_app/response/checklist_response.dart';
 import 'package:booking_app/service/storage_service.dart';
 
 class CheckListService {
@@ -21,7 +21,7 @@ class CheckListService {
   // ✅ GET ALL với authentication
   Future<List<CheckListItem>> getAll() async {
     try {
-      print('🔄 [GET] $baseUrl');
+      print('[GET] $baseUrl');
 
       final headers = await getHeaders();
       final response = await http
@@ -39,7 +39,7 @@ class CheckListService {
         throw Exception('HTTP ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
-      print('❌ Error in getAll: $e');
+      print('Error in getAll: $e');
       rethrow;
     }
   }
@@ -52,8 +52,8 @@ class CheckListService {
         'description': item.description,
       };
 
-      print('📤 [POST] $baseUrl');
-      print('📤 Body: ${json.encode(requestBody)}');
+      print('[POST] $baseUrl');
+      print('Body: ${json.encode(requestBody)}');
 
       final headers = await getHeaders();
       final response = await http
@@ -76,7 +76,7 @@ class CheckListService {
         throw Exception('HTTP ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
-      print('❌ Error in create: $e');
+      print('Error in create: $e');
       rethrow;
     }
   }
@@ -90,8 +90,8 @@ class CheckListService {
       };
 
       final url = '$baseUrl/$id';
-      print('📤 [PUT] $url');
-      print('📤 Body: ${json.encode(requestBody)}');
+      print('[PUT] $url');
+      print('Body: ${json.encode(requestBody)}');
 
       final headers = await getHeaders();
       final response = await http
@@ -114,7 +114,7 @@ class CheckListService {
         throw Exception('HTTP ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
-      print('❌ Error in update: $e');
+      print('Error in update: $e');
       rethrow;
     }
   }
@@ -123,14 +123,14 @@ class CheckListService {
   Future<void> delete(String id) async {
     try {
       final url = '$baseUrl/$id';
-      print('📤 [DELETE] $url');
+      print('[DELETE] $url');
 
       final headers = await getHeaders();
       final response = await http
           .delete(Uri.parse(url), headers: headers)
           .timeout(const Duration(seconds: 10));
 
-      print('📥 Response ${response.statusCode}');
+      print('Response ${response.statusCode}');
 
       if (response.statusCode == 401) {
         throw Exception('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
@@ -138,7 +138,7 @@ class CheckListService {
         throw Exception('HTTP ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
-      print('❌ Error in delete: $e');
+      print('Error in delete: $e');
       rethrow;
     }
   }
@@ -147,7 +147,7 @@ class CheckListService {
   Future<CheckListItem> toggleCompleted(String id) async {
     try {
       final url = '$baseUrl/$id/toggle';
-      print('📤 [PATCH] $url');
+      print('[PATCH] $url');
 
       final headers = await getHeaders();
       final response = await http
@@ -166,7 +166,7 @@ class CheckListService {
         throw Exception('HTTP ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
-      print('❌ Error in toggle: $e');
+      print('Error in toggle: $e');
       rethrow;
     }
   }
@@ -175,7 +175,7 @@ class CheckListService {
   Future<Map<String, int>> getStatistics() async {
     try {
       final url = '$baseUrl/statistics';
-      print('🔄 [GET] $url');
+      print('[GET] $url');
 
       final headers = await getHeaders();
       final response = await http
@@ -198,7 +198,7 @@ class CheckListService {
         throw Exception('HTTP ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
-      print('❌ Error in getStatistics: $e');
+      print('Error in getStatistics: $e');
       rethrow;
     }
   }

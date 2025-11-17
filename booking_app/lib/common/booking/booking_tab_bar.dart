@@ -4,11 +4,13 @@ import 'package:iconsax/iconsax.dart';
 class BookingTabBar extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onTabSelected;
+  final List<String> tabs;
 
   const BookingTabBar({
     super.key,
     required this.selectedIndex,
     required this.onTabSelected,
+    required this.tabs,
   });
 
   @override
@@ -26,10 +28,11 @@ class BookingTabBar extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _TabButton(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            _TabButton(
               index: 0,
               title: 'Chờ xử lý',
               icon: Iconsax.clock,
@@ -37,10 +40,8 @@ class BookingTabBar extends StatelessWidget {
               isSelected: selectedIndex == 0,
               onTap: () => onTabSelected(0),
             ),
-          ),
-          Container(width: 1, height: 40, color: Colors.grey.shade200),
-          Expanded(
-            child: _TabButton(
+            Container(width: 1, height: 40, color: Colors.grey.shade200),
+            _TabButton(
               index: 1,
               title: 'Đã xác nhận',
               icon: Iconsax.tick_circle,
@@ -48,10 +49,8 @@ class BookingTabBar extends StatelessWidget {
               isSelected: selectedIndex == 1,
               onTap: () => onTabSelected(1),
             ),
-          ),
-          Container(width: 1, height: 40, color: Colors.grey.shade200),
-          Expanded(
-            child: _TabButton(
+            Container(width: 1, height: 40, color: Colors.grey.shade200),
+            _TabButton(
               index: 2,
               title: 'Đã từ chối',
               icon: Iconsax.close_circle,
@@ -59,8 +58,26 @@ class BookingTabBar extends StatelessWidget {
               isSelected: selectedIndex == 2,
               onTap: () => onTabSelected(2),
             ),
-          ),
-        ],
+            Container(width: 1, height: 40, color: Colors.grey.shade200),
+            _TabButton(
+              index: 3,
+              title: 'Đã hủy',
+              icon: Iconsax.slash,
+              color: Colors.grey.shade600,
+              isSelected: selectedIndex == 3,
+              onTap: () => onTabSelected(3),
+            ),
+            Container(width: 1, height: 40, color: Colors.grey.shade200),
+            _TabButton(
+              index: 4,
+              title: 'Khung giờ',
+              icon: Iconsax.calendar,
+              color: Colors.blue,
+              isSelected: selectedIndex == 4,
+              onTap: () => onTabSelected(4),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -88,12 +105,13 @@ class _TabButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         decoration: BoxDecoration(
           color: isSelected ? color.withOpacity(0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               icon,
@@ -108,6 +126,7 @@ class _TabButton extends StatelessWidget {
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 color: isSelected ? color : Colors.grey.shade600,
               ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),

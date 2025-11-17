@@ -27,26 +27,6 @@ class BottomActions extends StatelessWidget {
       child: SafeArea(
         child: Row(
           children: [
-            // Preview Button
-            Expanded(
-              child: Obx(() => OutlinedButton.icon(
-                    onPressed: controller.isLoading.value
-                        ? null
-                        : controller.previewPost,
-                    icon: const Icon(Iconsax.eye, size: 20),
-                    label: const Text('Xem trước'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: WColors.primary,
-                      side: const BorderSide(color: WColors.primary),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  )),
-            ),
-            const SizedBox(width: 12),
-
             // Publish Button
             Expanded(
               flex: 2,

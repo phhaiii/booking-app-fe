@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
-import 'package:booking_app/models/booking_response.dart';
+import 'package:booking_app/response/booking_response.dart';
 
 class BookingRejectDialog {
   static void show(

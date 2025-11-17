@@ -1,5 +1,6 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:booking_app/models/checklist_response.dart';
+import 'package:booking_app/response/checklist_response.dart';
 import 'package:booking_app/service/checklist_service.dart';
 
 class CheckListController extends GetxController {
@@ -46,7 +47,7 @@ class CheckListController extends GetxController {
         incompleteCount.value = stats['incomplete'] ?? 0;
         totalCount.value = stats['total'] ?? 0;
       } catch (e) {
-        print('⚠️ Cannot load statistics: $e');
+        print('Cannot load statistics: $e');
       }
 
       update();
@@ -58,8 +59,8 @@ class CheckListController extends GetxController {
         '❌ Lỗi',
         'Không thể tải dữ liệu: $e',
         snackPosition: SnackPosition.TOP,
-        backgroundColor: Get.theme.colorScheme.error.withOpacity(0.1),
-        colorText: Get.theme.colorScheme.error,
+        backgroundColor: Colors.red.shade50,
+        colorText: Colors.red.shade900,
         duration: const Duration(seconds: 5),
       );
     } finally {
@@ -68,7 +69,6 @@ class CheckListController extends GetxController {
     }
   }
 
-  // ✅ Các method khác giữ nguyên như cũ
   Future<void> addItem(String title, String? description) async {
     try {
       isLoading.value = true;
@@ -85,8 +85,8 @@ class CheckListController extends GetxController {
         '✅ Thành công',
         'Đã thêm mục mới',
         snackPosition: SnackPosition.TOP,
-        backgroundColor: Get.theme.colorScheme.primary.withOpacity(0.1),
-        colorText: Get.theme.colorScheme.primary,
+        backgroundColor: Colors.green.shade50,
+        colorText: Colors.green.shade900,
       );
 
       update();
@@ -95,8 +95,8 @@ class CheckListController extends GetxController {
         '❌ Lỗi',
         'Không thể thêm mục: $e',
         snackPosition: SnackPosition.TOP,
-        backgroundColor: Get.theme.colorScheme.error.withOpacity(0.1),
-        colorText: Get.theme.colorScheme.error,
+        backgroundColor: Colors.red.shade50,
+        colorText: Colors.red.shade900,
       );
     } finally {
       isLoading.value = false;
@@ -128,8 +128,8 @@ class CheckListController extends GetxController {
         '✅ Đã cập nhật',
         'Mục đã được cập nhật',
         snackPosition: SnackPosition.TOP,
-        backgroundColor: Get.theme.colorScheme.primary.withOpacity(0.1),
-        colorText: Get.theme.colorScheme.primary,
+        backgroundColor: Colors.green.shade50,
+        colorText: Colors.green.shade900,
       );
 
       update();
@@ -138,8 +138,8 @@ class CheckListController extends GetxController {
         '❌ Lỗi',
         'Không thể cập nhật: $e',
         snackPosition: SnackPosition.TOP,
-        backgroundColor: Get.theme.colorScheme.error.withOpacity(0.1),
-        colorText: Get.theme.colorScheme.error,
+        backgroundColor: Colors.red.shade50,
+        colorText: Colors.red.shade900,
       );
     } finally {
       isLoading.value = false;
@@ -162,8 +162,8 @@ class CheckListController extends GetxController {
         '✅ Đã xóa',
         'Mục đã được xóa',
         snackPosition: SnackPosition.TOP,
-        backgroundColor: Get.theme.colorScheme.error.withOpacity(0.1),
-        colorText: Get.theme.colorScheme.error,
+        backgroundColor: Colors.orange.shade50,
+        colorText: Colors.orange.shade900,
       );
 
       update();
@@ -172,8 +172,8 @@ class CheckListController extends GetxController {
         '❌ Lỗi',
         'Không thể xóa: $e',
         snackPosition: SnackPosition.TOP,
-        backgroundColor: Get.theme.colorScheme.error.withOpacity(0.1),
-        colorText: Get.theme.colorScheme.error,
+        backgroundColor: Colors.red.shade50,
+        colorText: Colors.red.shade900,
       );
     } finally {
       isLoading.value = false;
@@ -194,12 +194,10 @@ class CheckListController extends GetxController {
         updated.isCompleted ? '✅ Hoàn thành' : '⏳ Chưa hoàn thành',
         updated.title,
         snackPosition: SnackPosition.TOP,
-        backgroundColor: updated.isCompleted
-            ? Get.theme.colorScheme.primary.withOpacity(0.1)
-            : Get.theme.colorScheme.secondary.withOpacity(0.1),
-        colorText: updated.isCompleted
-            ? Get.theme.colorScheme.primary
-            : Get.theme.colorScheme.secondary,
+        backgroundColor:
+            updated.isCompleted ? Colors.green.shade50 : Colors.blue.shade50,
+        colorText:
+            updated.isCompleted ? Colors.green.shade900 : Colors.blue.shade900,
       );
 
       update();
@@ -208,8 +206,8 @@ class CheckListController extends GetxController {
         '❌ Lỗi',
         'Không thể cập nhật trạng thái: $e',
         snackPosition: SnackPosition.TOP,
-        backgroundColor: Get.theme.colorScheme.error.withOpacity(0.1),
-        colorText: Get.theme.colorScheme.error,
+        backgroundColor: Colors.red.shade50,
+        colorText: Colors.red.shade900,
       );
     }
   }

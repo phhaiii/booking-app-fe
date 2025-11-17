@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:booking_app/features/controller/booking_controller.dart';
-import 'package:booking_app/models/booking_response.dart';
+import 'package:booking_app/response/booking_response.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 // Import widgets từ common/booking
@@ -12,6 +12,7 @@ import 'package:booking_app/common/booking/booking_calendar_widget.dart';
 import 'package:booking_app/common/booking/booking_tab_bar.dart';
 import 'package:booking_app/common/booking/booking_list_widget.dart';
 import 'package:booking_app/common/booking/booking_loading_widget.dart';
+import 'package:booking_app/common/booking/booking_timeslot_widget.dart';
 
 // Import dialogs
 import 'package:booking_app/utils/dialogs/booking_confirm_dialog.dart';
@@ -28,9 +29,7 @@ class BookingManagementScreen extends StatefulWidget {
 }
 
 class _BookingManagementScreenState extends State<BookingManagementScreen> {
-  // ✅ FIX: Không dùng late, khởi tạo trong initState
   BookingController? controller;
-
   CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
@@ -41,14 +40,12 @@ class _BookingManagementScreenState extends State<BookingManagementScreen> {
     super.initState();
     _selectedDay = DateTime.now();
 
-    // ✅ FIX: Khởi tạo controller đúng cách
     if (!Get.isRegistered<BookingController>()) {
       controller = Get.put(BookingController());
     } else {
       controller = Get.find<BookingController>();
     }
 
-    // ✅ FIX: Đợi frame render xong mới load data
     WidgetsBinding.instance.addPostFrameCallback((_) {
       controller?.refreshBookings();
     });
@@ -56,7 +53,6 @@ class _BookingManagementScreenState extends State<BookingManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ FIX: Kiểm tra controller null
     if (controller == null) {
       return const Scaffold(
         body: Center(
@@ -69,7 +65,6 @@ class _BookingManagementScreenState extends State<BookingManagementScreen> {
       backgroundColor: Colors.grey.shade50,
       appBar: _buildAppBar(),
       body: GetBuilder<BookingController>(
-        // ✅ FIX: Dùng GetBuilder thay vì Obx
         init: controller,
         builder: (ctrl) {
           if (ctrl.isLoading.value && ctrl.allBookings.isEmpty) {
@@ -112,6 +107,13 @@ class _BookingManagementScreenState extends State<BookingManagementScreen> {
                         selectedTabIndex = index;
                       });
                     },
+                    tabs: const [
+                      'Chờ duyệt',
+                      'Đã duyệt',
+                      'Đã từ chối',
+                      'Đã hủy',
+                      'Khung giờ',
+                    ],
                   ),
                   const SizedBox(height: 16),
                   _buildTabContent(ctrl),
@@ -154,41 +156,56 @@ class _BookingManagementScreenState extends State<BookingManagementScreen> {
     );
   }
 
-  // ✅ FIX: Thêm parameter controller
   Widget _buildTabContent(BookingController ctrl) {
-    switch (selectedTabIndex) {
-      case 0:
-        return BookingListWidget(
-          bookings: ctrl.pendingBookings,
-          emptyMessage: 'Không có yêu cầu nào đang chờ',
-          emptyIcon: Iconsax.clock,
-          emptyColor: Colors.orange,
-          showActions: true,
-          onConfirm: (booking) => _confirmBooking(booking),
-          onReject: (booking) => _rejectBooking(booking),
-          onShowDetails: (booking) => _showBookingDetails(booking),
-        );
-      case 1:
-        return BookingListWidget(
-          bookings: ctrl.confirmedBookings,
-          emptyMessage: 'Chưa có đặt lịch nào được xác nhận',
-          emptyIcon: Iconsax.tick_circle,
-          emptyColor: Colors.green,
-          showActions: false,
-          onShowDetails: (booking) => _showBookingDetails(booking),
-        );
-      case 2:
-        return BookingListWidget(
-          bookings: ctrl.rejectedBookings,
-          emptyMessage: 'Chưa có đặt lịch nào bị từ chối',
-          emptyIcon: Iconsax.close_circle,
-          emptyColor: Colors.red,
-          showActions: false,
-          onShowDetails: (booking) => _showBookingDetails(booking),
-        );
-      default:
-        return const SizedBox();
-    }
+    return Obx(() {
+      switch (selectedTabIndex) {
+        case 0: // Pending
+          return BookingListWidget(
+            bookings: ctrl.pendingBookings,
+            emptyMessage: 'Không có yêu cầu nào đang chờ',
+            emptyIcon: Iconsax.clock,
+            emptyColor: Colors.orange,
+            showActions: true,
+            onConfirm: (booking) => _confirmBooking(booking),
+            onReject: (booking) => _rejectBooking(booking),
+            onShowDetails: (booking) => _showBookingDetails(booking),
+          );
+        case 1: // Confirmed
+          return BookingListWidget(
+            bookings: ctrl.confirmedBookings,
+            emptyMessage: 'Chưa có đặt lịch nào được xác nhận',
+            emptyIcon: Iconsax.tick_circle,
+            emptyColor: Colors.green,
+            showActions: false,
+            onShowDetails: (booking) => _showBookingDetails(booking),
+          );
+        case 2: // Rejected
+          return BookingListWidget(
+            bookings: ctrl.rejectedBookings,
+            emptyMessage: 'Chưa có đặt lịch nào bị từ chối',
+            emptyIcon: Iconsax.close_circle,
+            emptyColor: Colors.red,
+            showActions: false,
+            onShowDetails: (booking) => _showBookingDetails(booking),
+          );
+        case 3: // Cancelled
+          return BookingListWidget(
+            bookings: ctrl.cancelledBookings,
+            emptyMessage: 'Chưa có đặt lịch nào bị hủy',
+            emptyIcon: Iconsax.slash,
+            emptyColor: Colors.grey,
+            showActions: false,
+            onShowDetails: (booking) => _showBookingDetails(booking),
+          );
+        case 4: // Time Slots tab
+          return BookingTimeSlotsWidget(
+            controller: ctrl,
+            selectedDate: _selectedDay ?? DateTime.now(),
+          );
+        default:
+          return const SizedBox();
+      }
+    });
   }
 
   void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
@@ -229,8 +246,6 @@ class _BookingManagementScreenState extends State<BookingManagementScreen> {
 
   @override
   void dispose() {
-    // ✅ FIX: Không dispose controller ở đây nếu dùng Get.put
-    // Controller sẽ tự dispose khi không còn được sử dụng
     super.dispose();
   }
 }

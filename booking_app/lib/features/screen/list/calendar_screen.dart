@@ -1,9 +1,16 @@
+import 'package:booking_app/features/controller/userbooking_controller.dart';
+import 'package:booking_app/features/screen/userbooking/create_booking_screen.dart';
+import 'package:booking_app/response/booking_response.dart';
 import 'package:booking_app/utils/constants/colors.dart';
 import 'package:booking_app/utils/constants/sizes.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
+
+// Import dialogs
+import 'package:booking_app/utils/dialogs/booking_detail_dialog.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -17,189 +24,288 @@ class _CalendarScreenState extends State<CalendarScreen> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
 
-  // Sample events
-  final Map<DateTime, List<CalendarEvent>> _events = {
-    DateTime(2024, 10, 25): [
-      CalendarEvent('Hẹn xem venue', 'Trống Đồng Palace', '14:00'),
-      CalendarEvent('Thử váy cưới', 'May Studio', '16:30'),
-    ],
-    DateTime(2024, 10, 28): [
-      CalendarEvent('Tư vấn menu', 'Long Vĩ Palace', '10:00'),
-    ],
-    DateTime(2024, 11, 2): [
-      CalendarEvent('Chụp ảnh cưới', 'Hồ Gươm', '06:00'),
-    ],
-  };
+  late UserBookingController _controller;
 
   @override
   void initState() {
     super.initState();
     _selectedDay = DateTime.now();
+    _controller = Get.put(UserBookingController());
+
+    // ✅ Delay để tránh rebuild trong initState
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _controller.refreshData();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey.shade50,
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         title: const Text(
-          'Lịch hẹn',
+          'Lịch hẹn của tôi',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: WColors.primary,
           ),
         ),
         centerTitle: true,
-        backgroundColor: Colors.transparent,
+        backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Iconsax.arrow_left, color: WColors.primary),
           onPressed: () => Get.back(),
         ),
         actions: [
-          Container(
-            margin: const EdgeInsets.only(right: WSizes.defaultSpace),
-            child: IconButton(
-              onPressed: _showAddEventDialog,
-              icon: const Icon(Iconsax.add_circle, color: WColors.primary),
-            ),
+          IconButton(
+            onPressed: () => _controller.refreshData(),
+            icon: const Icon(Iconsax.refresh, color: WColors.primary),
+            tooltip: 'Làm mới',
+          ),
+          IconButton(
+            onPressed: () => Get.to(() => const CreateBookingScreen()),
+            icon: const Icon(Iconsax.add_circle, color: WColors.primary),
+            tooltip: 'Tạo lịch hẹn mới',
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(WSizes.defaultSpace),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Calendar Widget
-            _buildCalendarCard(),
-            const SizedBox(height: WSizes.spaceBtwSections),
+      body: Obx(() {
+        if (_controller.isLoading.value && _controller.myBookings.isEmpty) {
+          return const Center(
+            child: CircularProgressIndicator(color: WColors.primary),
+          );
+        }
 
-            // Events List
-            _buildEventsSection(),
+        return RefreshIndicator(
+          onRefresh: () => _controller.refreshData(),
+          color: WColors.primary,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(vertical: WSizes.defaultSpace),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildBookingSummary(),
+                const SizedBox(height: WSizes.spaceBtwSections),
+                _buildCalendarCard(),
+                const SizedBox(height: WSizes.spaceBtwSections),
+                _buildEventsSection(),
+                const SizedBox(height: 80),
+              ],
+            ),
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildBookingSummary() {
+    return Obx(() {
+      final totalBookings = _controller.myBookings.length;
+      final pendingCount = _controller.pendingBookings.length;
+      final confirmedCount = _controller.confirmedBookings.length;
+
+      return Container(
+        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            Expanded(
+              child: _buildSummaryItem(
+                'Chờ duyệt',
+                pendingCount,
+                Iconsax.clock,
+                Colors.orange,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildSummaryItem(
+                'Đã duyệt',
+                confirmedCount,
+                Iconsax.tick_circle,
+                Colors.green,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildSummaryItem(
+                'Tổng',
+                totalBookings,
+                Iconsax.calendar_1,
+                WColors.primary,
+              ),
+            ),
           ],
         ),
+      );
+    });
+  }
+
+  Widget _buildSummaryItem(
+      String label, int count, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 32),
+          const SizedBox(height: 8),
+          Text(
+            count.toString(),
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildCalendarCard() {
     return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: WColors.primary.withOpacity(0.2)),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 2,
             blurRadius: 8,
-            offset: const Offset(0, 3),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: TableCalendar<CalendarEvent>(
+      child: TableCalendar<BookingRequestUI>(
         firstDay: DateTime.utc(2020, 1, 1),
         lastDay: DateTime.utc(2030, 12, 31),
         focusedDay: _focusedDay,
         calendarFormat: _calendarFormat,
-        eventLoader: _getEventsForDay,
+        eventLoader: (day) => _controller.getBookingsForDate(day),
         startingDayOfWeek: StartingDayOfWeek.monday,
         selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
         onDaySelected: _onDaySelected,
         onFormatChanged: (format) {
-          setState(() {
-            _calendarFormat = format;
-          });
+          if (_calendarFormat != format) {
+            setState(() {
+              _calendarFormat = format;
+            });
+          }
         },
         onPageChanged: (focusedDay) {
-          _focusedDay = focusedDay;
+          setState(() {
+            _focusedDay = focusedDay;
+          });
         },
         calendarStyle: CalendarStyle(
           outsideDaysVisible: false,
-          weekendTextStyle: TextStyle(color: Colors.red.shade600),
-          holidayTextStyle: TextStyle(color: Colors.red.shade600),
+          weekendTextStyle: TextStyle(color: Colors.red.shade400),
           selectedDecoration: const BoxDecoration(
             color: WColors.primary,
             shape: BoxShape.circle,
           ),
           todayDecoration: BoxDecoration(
-            color: WColors.primary.withOpacity(0.5),
+            color: WColors.primary.withOpacity(0.3),
             shape: BoxShape.circle,
           ),
           markerDecoration: const BoxDecoration(
             color: Colors.orange,
             shape: BoxShape.circle,
           ),
+          markersMaxCount: 3,
+          markerSize: 6,
         ),
-        headerStyle: HeaderStyle(
+        headerStyle: const HeaderStyle(
           formatButtonVisible: true,
           titleCentered: true,
           formatButtonShowsNext: false,
           formatButtonDecoration: BoxDecoration(
             color: WColors.primary,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.all(Radius.circular(8)),
           ),
-          formatButtonTextStyle: const TextStyle(
+          formatButtonTextStyle: TextStyle(
             color: Colors.white,
+            fontSize: 12,
           ),
-          titleTextStyle: const TextStyle(
-            color: WColors.primary,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
+          formatButtonPadding: EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 8,
           ),
-          leftChevronIcon: const Icon(
-            Iconsax.arrow_left_2,
-            color: WColors.primary,
-          ),
-          rightChevronIcon: const Icon(
-            Iconsax.arrow_right_3,
-            color: WColors.primary,
-          ),
+          leftChevronIcon: Icon(Icons.chevron_left, color: WColors.primary),
+          rightChevronIcon: Icon(Icons.chevron_right, color: WColors.primary),
         ),
       ),
     );
   }
 
   Widget _buildEventsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Lịch hẹn ngày ${_selectedDay?.day}/${_selectedDay?.month}/${_selectedDay?.year}',
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: WColors.primary,
+    final selectedDate = _selectedDay ?? DateTime.now();
+    final dateStr = DateFormat('dd/MM/yyyy').format(selectedDate);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Lịch hẹn ngày $dateStr',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: WColors.primary,
+            ),
           ),
-        ),
-        const SizedBox(height: WSizes.spaceBtwItems),
-        _buildEventsList(),
-      ],
+          const SizedBox(height: WSizes.spaceBtwItems),
+          _buildEventsList(),
+        ],
+      ),
     );
   }
 
   Widget _buildEventsList() {
-    final selectedEvents = _getEventsForDay(_selectedDay ?? DateTime.now());
+    final selectedBookings =
+        _controller.getBookingsForDate(_selectedDay ?? DateTime.now());
 
-    if (selectedEvents.isEmpty) {
+    if (selectedBookings.isEmpty) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(40),
         decoration: BoxDecoration(
           color: Colors.grey.shade50,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade300),
+          border: Border.all(color: Colors.grey.shade200),
         ),
         child: Column(
           children: [
-            Icon(
-              Iconsax.calendar_remove,
-              size: 60,
-              color: Colors.grey.shade400,
-            ),
+            Icon(Iconsax.calendar_remove,
+                size: 64, color: Colors.grey.shade300),
             const SizedBox(height: 16),
             Text(
-              'Không có sự kiện',
+              'Không có lịch hẹn',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
@@ -209,10 +315,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             const SizedBox(height: 8),
             Text(
               'Nhấn + để thêm lịch hẹn mới',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade500,
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
             ),
           ],
         ),
@@ -220,355 +323,419 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
 
     return Column(
-      children: selectedEvents.map((event) => _buildEventCard(event)).toList(),
+      mainAxisSize: MainAxisSize.min,
+      children: selectedBookings
+          .map((booking) => _buildBookingCard(booking))
+          .toList(),
     );
   }
 
-  Widget _buildEventCard(CalendarEvent event) {
-    return Container(
+  Widget _buildBookingCard(BookingRequestUI booking) {
+    final statusInfo = _getStatusInfo(booking.status);
+
+    return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
+      elevation: 2,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: WColors.primary.withOpacity(0.2)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 2,
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: WColors.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              Iconsax.calendar_tick,
-              color: WColors.primary,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  event.title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: WColors.primary,
+      child: InkWell(
+        onTap: () => _showBookingDetails(booking),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: statusInfo['color'].withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                          color: statusInfo['color'].withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(statusInfo['icon'],
+                            size: 14, color: statusInfo['color']),
+                        const SizedBox(width: 4),
+                        Text(
+                          statusInfo['label'],
+                          style: TextStyle(
+                            color: statusInfo['color'],
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    DateFormat('HH:mm').format(booking.requestedDate),
+                    style: const TextStyle(
+                      color: WColors.primary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: WColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Iconsax.calendar_tick,
+                        color: WColors.primary),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          booking.serviceName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: WColors.primary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Iconsax.location,
+                                size: 14, color: Colors.grey),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                booking.venueName ?? 'Không rõ địa điểm',
+                                style: TextStyle(
+                                    color: Colors.grey.shade600, fontSize: 14),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Iconsax.people,
+                                size: 14, color: Colors.grey),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${booking.numberOfGuests ?? 0} khách',
+                              style: TextStyle(
+                                  color: Colors.grey.shade600, fontSize: 14),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (booking.status == BookingStatus.pending) ...[
+                const SizedBox(height: 12),
+                const Divider(),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _showCancelDialog(booking),
+                        icon: const Icon(Iconsax.close_circle, size: 18),
+                        label: const Text('Hủy'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red,
+                          side: const BorderSide(color: Colors.red),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _showBookingDetails(booking),
+                        icon: const Icon(Iconsax.eye, size: 18),
+                        label: const Text('Chi tiết'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: WColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ] else ...[
+                const SizedBox(height: 12),
+                const Divider(),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _showBookingDetails(booking),
+                    icon: const Icon(Iconsax.eye, size: 18),
+                    label: const Text('Xem chi tiết'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: WColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(Iconsax.location, size: 14, color: Colors.grey),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        event.location,
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 14,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    const Icon(Iconsax.clock, size: 14, color: Colors.grey),
-                    const SizedBox(width: 4),
-                    Text(
-                      event.time,
-                      style: const TextStyle(
-                        color: WColors.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
               ],
-            ),
-          ),
-          PopupMenuButton(
-            icon: const Icon(Iconsax.more, color: WColors.primary),
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'edit',
-                child: Row(
-                  children: [
-                    Icon(Iconsax.edit, color: WColors.primary),
-                    SizedBox(width: 8),
-                    Text('Chỉnh sửa'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'delete',
-                child: Row(
-                  children: [
-                    Icon(Iconsax.trash, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Xóa', style: TextStyle(color: Colors.red)),
-                  ],
-                ),
-              ),
             ],
-            onSelected: (value) {
-              if (value == 'delete') {
-                _deleteEvent(event);
-              } else if (value == 'edit') {
-                _showEditEventDialog(event);
-              }
-            },
           ),
-        ],
+        ),
       ),
     );
   }
 
-  List<CalendarEvent> _getEventsForDay(DateTime day) {
-    return _events[DateTime(day.year, day.month, day.day)] ?? [];
+  Map<String, dynamic> _getStatusInfo(BookingStatus status) {
+    switch (status) {
+      case BookingStatus.pending:
+        return {
+          'color': Colors.orange,
+          'icon': Iconsax.clock,
+          'label': 'CHỜ DUYỆT',
+        };
+      case BookingStatus.confirmed:
+        return {
+          'color': Colors.green,
+          'icon': Iconsax.tick_circle,
+          'label': 'ĐÃ DUYỆT',
+        };
+      case BookingStatus.rejected:
+        return {
+          'color': Colors.red,
+          'icon': Iconsax.close_circle,
+          'label': 'TỪ CHỐI',
+        };
+      case BookingStatus.completed:
+        return {
+          'color': Colors.blue,
+          'icon': Iconsax.medal_star,
+          'label': 'HOÀN THÀNH',
+        };
+      case BookingStatus.cancelled:
+        return {
+          'color': Colors.grey,
+          'icon': Iconsax.close_square,
+          'label': 'ĐÃ HỦY',
+        };
+    }
   }
 
   void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
-    setState(() {
-      _selectedDay = selectedDay;
-      _focusedDay = focusedDay;
-    });
+    if (!isSameDay(_selectedDay, selectedDay)) {
+      setState(() {
+        _selectedDay = selectedDay;
+        _focusedDay = focusedDay;
+      });
+    }
   }
 
-  void _showAddEventDialog() {
-    _showEventDialog();
-  }
-
-  void _showEditEventDialog(CalendarEvent event) {
-    _showEventDialog(event: event);
-  }
-
-  void _showEventDialog({CalendarEvent? event}) {
-    final titleController = TextEditingController(text: event?.title ?? '');
-    final locationController =
-        TextEditingController(text: event?.location ?? '');
-    final timeController = TextEditingController(text: event?.time ?? '');
-    final isEditing = event != null;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        title: Text(
-          isEditing ? 'Chỉnh sửa lịch hẹn' : 'Thêm lịch hẹn mới',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: WColors.primary,
-          ),
+  void _showCancelDialog(BookingRequestUI booking) {
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: const Text(
+          'Xác nhận hủy',
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildDialogTextField(
-              controller: titleController,
-              label: 'Tiêu đề',
-              icon: Iconsax.edit,
-              hint: 'Nhập tiêu đề sự kiện',
-            ),
-            const SizedBox(height: WSizes.spaceBtwInputFields),
-            _buildDialogTextField(
-              controller: locationController,
-              label: 'Địa điểm',
-              icon: Iconsax.location,
-              hint: 'Nhập địa điểm',
-            ),
-            const SizedBox(height: WSizes.spaceBtwInputFields),
-            _buildDialogTextField(
-              controller: timeController,
-              label: 'Thời gian',
-              icon: Iconsax.clock,
-              hint: 'VD: 14:00',
+            const Text('Bạn có chắc muốn hủy đặt lịch này không?'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    booking.serviceName,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    DateFormat('dd/MM/yyyy - HH:mm')
+                        .format(booking.requestedDate),
+                    style: TextStyle(color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Hủy',
-              style: TextStyle(color: Colors.grey.shade600),
-            ),
+            onPressed: () => Get.back(),
+            child: Text('Không', style: TextStyle(color: Colors.grey.shade600)),
           ),
           ElevatedButton(
             onPressed: () {
-              if (isEditing) {
-                _editEvent(event, titleController.text, locationController.text,
-                    timeController.text);
-              } else {
-                _addEvent(titleController.text, locationController.text,
-                    timeController.text);
-              }
-              Navigator.pop(context);
+              Get.back();
+              _controller.cancelBooking(booking);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: WColors.primary,
+              backgroundColor: Colors.red,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+                  borderRadius: BorderRadius.circular(8)),
             ),
-            child: Text(isEditing ? 'Cập nhật' : 'Thêm'),
+            child: const Text('Xác nhận hủy'),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDialogTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    required String hint,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontWeight: FontWeight.w500,
-            color: WColors.primary,
+  void _showBookingDetails(BookingRequestUI booking) {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          constraints: const BoxConstraints(maxWidth: 400, maxHeight: 600),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: WColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Iconsax.calendar_tick,
+                      color: WColors.primary,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Chi tiết đặt lịch',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: WColors.primary,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Get.back(),
+                    icon: const Icon(Icons.close),
+                    color: Colors.grey,
+                  ),
+                ],
+              ),
+              const Divider(height: 32),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildDetailRow('Mã đặt lịch', '#${booking.id}'),
+                      _buildDetailRow('Dịch vụ', booking.serviceName),
+                      _buildDetailRow(
+                          'Địa điểm', booking.venueName ?? 'Không rõ'),
+                      _buildDetailRow(
+                        'Ngày & giờ',
+                        DateFormat('dd/MM/yyyy - HH:mm')
+                            .format(booking.requestedDate),
+                      ),
+                      _buildDetailRow(
+                          'Số khách', '${booking.numberOfGuests ?? 0} người'),
+                      _buildDetailRow(
+                        'Trạng thái',
+                        _getStatusInfo(booking.status)['label'],
+                      ),
+                      if (booking.message != null &&
+                          booking.message!.isNotEmpty)
+                        _buildDetailRow('Ghi chú', booking.message!),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Get.back(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: WColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Đóng'),
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            hintText: hint,
-            prefixIcon: Icon(icon, color: WColors.primary.withOpacity(0.7)),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: WColors.primary),
-            ),
-            filled: true,
-            fillColor: Colors.grey.shade50,
-          ),
-        ),
-      ],
+      ),
     );
   }
 
-  void _addEvent(String title, String location, String time) {
-    if (title.isNotEmpty && _selectedDay != null) {
-      final eventDate =
-          DateTime(_selectedDay!.year, _selectedDay!.month, _selectedDay!.day);
-
-      setState(() {
-        if (_events[eventDate] != null) {
-          _events[eventDate]!.add(CalendarEvent(title, location, time));
-        } else {
-          _events[eventDate] = [CalendarEvent(title, location, time)];
-        }
-      });
-
-      Get.snackbar(
-        'Thành công',
-        'Đã thêm lịch hẹn mới',
-        backgroundColor: Colors.green.withOpacity(0.1),
-        colorText: Colors.green,
-        snackPosition: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 2),
-      );
-    }
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              '$label:',
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
   }
-
-  void _editEvent(
-      CalendarEvent oldEvent, String title, String location, String time) {
-    if (title.isNotEmpty && _selectedDay != null) {
-      final eventDate =
-          DateTime(_selectedDay!.year, _selectedDay!.month, _selectedDay!.day);
-
-      setState(() {
-        final events = _events[eventDate];
-        if (events != null) {
-          final index = events.indexOf(oldEvent);
-          if (index != -1) {
-            events[index] = CalendarEvent(title, location, time);
-          }
-        }
-      });
-
-      Get.snackbar(
-        'Đã cập nhật',
-        'Lịch hẹn đã được cập nhật',
-        backgroundColor: Colors.blue.withOpacity(0.1),
-        colorText: Colors.blue,
-        snackPosition: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 2),
-      );
-    }
-  }
-
-  void _deleteEvent(CalendarEvent event) {
-    if (_selectedDay != null) {
-      final eventDate =
-          DateTime(_selectedDay!.year, _selectedDay!.month, _selectedDay!.day);
-
-      setState(() {
-        _events[eventDate]?.remove(event);
-        if (_events[eventDate]?.isEmpty == true) {
-          _events.remove(eventDate);
-        }
-      });
-
-      Get.snackbar(
-        'Đã xóa',
-        'Lịch hẹn đã được xóa',
-        backgroundColor: Colors.red.withOpacity(0.1),
-        colorText: Colors.red,
-        snackPosition: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 2),
-      );
-    }
-  }
-}
-
-class CalendarEvent {
-  final String title;
-  final String location;
-  final String time;
-
-  CalendarEvent(this.title, this.location, this.time);
 
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is CalendarEvent &&
-          runtimeType == other.runtimeType &&
-          title == other.title &&
-          location == other.location &&
-          time == other.time;
-
-  @override
-  int get hashCode => title.hashCode ^ location.hashCode ^ time.hashCode;
+  void dispose() {
+    super.dispose();
+  }
 }

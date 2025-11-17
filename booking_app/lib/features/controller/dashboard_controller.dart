@@ -1,226 +1,218 @@
 import 'package:get/get.dart';
-import 'package:booking_app/models/venuedetail_response.dart';
+import 'package:booking_app/model/venue_model.dart';
 import 'package:booking_app/service/venue_service.dart';
 import 'package:booking_app/features/screen/detailvenue/detailvenue.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 class DashboardController extends GetxController {
   // Observable variables
-  final venues = <VenueDetailResponse>[].obs;
+  final venues = <VenueModel>[].obs;
   final isLoading = false.obs;
   final searchQuery = ''.obs;
   final errorMessage = ''.obs;
 
   // Pagination
   final currentPage = 0.obs;
-  final totalPages = 0.obs;
-  final totalElements = 0.obs;
+  final pageSize = 20.obs;
   final hasMore = true.obs;
 
   @override
   void onInit() {
     super.onInit();
+    // ✅ THÊM: Load venues khi controller khởi tạo
     loadVenues();
   }
 
-  // ✅ SỬA: Load venues với proper API response
-  Future<void> loadVenues({bool isLoadMore = false}) async {
+  // ✅ THÊM METHOD NÀY - Load tất cả venues
+  Future<void> loadVenues({bool isRefresh = false}) async {
     try {
-      if (!isLoadMore) {
-        isLoading.value = true;
+      if (isRefresh) {
         currentPage.value = 0;
         venues.clear();
       }
 
+      isLoading.value = true;
       errorMessage.value = '';
 
-      print('🔄 Loading venues, page: ${currentPage.value}');
+      print('═══════════════════════════════════════');
+      print('LOADING VENUES');
+      print('Page: ${currentPage.value}');
+      print('Size: ${pageSize.value}');
+      print('═══════════════════════════════════════');
 
-      // ✅ Call API với proper response structure
+      // ✅ Call API GET /api/posts
       final response = await VenueService.getAllVenues(
         page: currentPage.value,
-        size: 10,
+        size: pageSize.value,
         sortBy: 'createdAt',
         sortDir: 'desc',
       );
 
-      if (response != null) {
-        final List<VenueDetailResponse> venueList =
-            response['venues'] as List<VenueDetailResponse>;
+      print('Raw response: $response');
 
-        if (isLoadMore) {
-          venues.addAll(venueList);
-        } else {
-          venues.assignAll(venueList);
+      if (response != null) {
+        print('Response received');
+        print('Available keys: ${response.keys}');
+
+        // ✅ TÌM KEY chứa danh sách venues
+        // Backend có thể trả về 'content' (Spring Page) hoặc 'venues' (custom)
+        final venuesKey = response.containsKey('content')
+            ? 'content'
+            : (response.containsKey('venues') ? 'venues' : null);
+
+        if (venuesKey == null) {
+          print('❌ No venues data found in response');
+          print('Available keys: ${response.keys}');
+          errorMessage.value = 'Dữ liệu không đúng định dạng';
+          return;
         }
 
-        totalPages.value = response['totalPages'] ?? 0;
-        totalElements.value = response['totalElements'] ?? 0;
-        hasMore.value = response['hasNext'] ?? false;
+        final content = response[venuesKey];
+
+        // ✅ CHECK if content is null
+        if (content == null) {
+          print('⚠️ $venuesKey is null');
+          hasMore.value = false;
+
+          if (venues.isEmpty) {
+            errorMessage.value = 'Chưa có bài viết nào';
+          }
+          return;
+        }
+
+        // ✅ CHECK if content is List
+        if (content is! List) {
+          print('❌ $venuesKey is not a List, it is: ${content.runtimeType}');
+          errorMessage.value = 'Dữ liệu không đúng định dạng';
+          return;
+        }
+
+        print('✅ Found ${content.length} venues in "$venuesKey"');
+
+        // ✅ Parse venues from List
+        final List<VenueModel> venueList = (content as List)
+            .map((json) {
+              try {
+                return VenueModel.fromJson(json as Map<String, dynamic>);
+              } catch (e) {
+                print('❌ Error parsing venue: $e');
+                print('JSON: $json');
+                return null;
+              }
+            })
+            .whereType<VenueModel>() // ✅ Remove null values
+            .toList();
+
+        if (isRefresh) {
+          venues.value = venueList;
+        } else {
+          venues.addAll(venueList);
+        }
+
+        // ✅ Update pagination info
+        // Kiểm tra cả 2 format: 'last' (Spring) hoặc 'hasNext' (custom)
+        if (response.containsKey('last')) {
+          hasMore.value = response['last'] == false;
+        } else if (response.containsKey('hasNext')) {
+          hasMore.value = response['hasNext'] == true;
+        } else {
+          // Nếu không có pagination info, check theo số lượng
+          hasMore.value = venueList.length >= pageSize.value;
+        }
+
+        if (!hasMore.value) {
+          print('⚠️ No more pages');
+        }
+
+        currentPage.value++;
 
         print('✅ Loaded ${venueList.length} venues');
-        print(
-            '📊 Page ${currentPage.value + 1}/$totalPages, Total: $totalElements');
+        print('Total venues in list: ${venues.length}');
+        print('Has more: ${hasMore.value}');
 
-        if (venueList.isNotEmpty && hasMore.value) {
-          currentPage.value++;
+        // ✅ Log pagination info
+        if (response.containsKey('totalElements')) {
+          print('Total elements: ${response['totalElements']}');
+        }
+        if (response.containsKey('totalPages')) {
+          print('Total pages: ${response['totalPages']}');
+        }
+
+        print('═══════════════════════════════════════');
+
+        if (venueList.isEmpty && venues.isEmpty) {
+          errorMessage.value = 'Chưa có bài viết nào';
         }
       } else {
-        errorMessage.value = 'Không thể tải danh sách địa điểm';
-
-        Get.snackbar(
-          'Lỗi',
-          'Không thể tải danh sách venue',
-          backgroundColor: Colors.red.withOpacity(0.1),
-          colorText: Colors.red,
-          snackPosition: SnackPosition.TOP,
-          icon: const Icon(Icons.error_outline, color: Colors.red),
-        );
+        print('❌ Response is null');
+        errorMessage.value = 'Không thể tải danh sách venue';
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('❌ Error loading venues: $e');
-      errorMessage.value = 'Lỗi kết nối: ${e.toString()}';
+      print('Stack trace: $stackTrace');
+      errorMessage.value = 'Lỗi khi tải danh sách: $e';
 
       Get.snackbar(
-        'Lỗi kết nối',
-        'Không thể tải danh sách venue. Vui lòng kiểm tra kết nối mạng.',
+        'Lỗi',
+        'Không thể tải danh sách venue',
         backgroundColor: Colors.red.withOpacity(0.1),
         colorText: Colors.red,
         snackPosition: SnackPosition.TOP,
-        duration: const Duration(seconds: 3),
-        icon: const Icon(Icons.error_outline, color: Colors.red),
       );
     } finally {
       isLoading.value = false;
     }
   }
 
-  // Load more venues
-  Future<void> loadMoreVenues() async {
-    if (!hasMore.value || isLoading.value) {
-      print('⚠️ Cannot load more venues');
-      return;
-    }
-
-    print('🔄 Loading more venues...');
-    await loadVenues(isLoadMore: true);
+  // ✅ Load more venues (pagination)
+  Future<void> loadMore() async {
+    if (isLoading.value || !hasMore.value) return;
+    await loadVenues(isRefresh: false);
   }
 
-  // ✅ SỬA: Toggle favorite với proper API response
-  Future<void> toggleFavorite(String venueId) async {
-    try {
-      final index = venues.indexWhere((venue) => venue.venueId == venueId);
+  // ✅ Refresh venues
+  Future<void> refreshVenues() async {
+    print('Refreshing venues...');
+    await loadVenues(isRefresh: true);
 
-      if (index == -1) {
-        print('⚠️ Venue not found: $venueId');
-        return;
-      }
-
-      // Optimistic update
-      final currentFavorite = venues[index].isFavorite ?? false;
-      venues[index] = venues[index].copyWith(
-        isFavorite: !currentFavorite,
-      );
-
-      print('🔄 Toggling favorite for venue: $venueId');
-
-      // Call API
-      final result = await VenueService.toggleFavorite(venueId);
-
-      if (result['success'] == true) {
-        final bool newFavoriteState = result['isFavorite'] ?? !currentFavorite;
-
-        venues[index] = venues[index].copyWith(
-          isFavorite: newFavoriteState,
-        );
-
-        print('✅ Favorite toggled: $newFavoriteState');
-
-        final venue = venues[index];
-        Get.snackbar(
-          newFavoriteState
-              ? '❤️ Đã thêm vào yêu thích'
-              : '💔 Đã xóa khỏi yêu thích',
-          venue.title,
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: newFavoriteState
-              ? Colors.red.withOpacity(0.1)
-              : Colors.grey.withOpacity(0.1),
-          colorText: newFavoriteState ? Colors.red : Colors.grey.shade700,
-          duration: const Duration(seconds: 2),
-          icon: Icon(
-            newFavoriteState ? Icons.favorite : Icons.favorite_border,
-            color: newFavoriteState ? Colors.red : Colors.grey,
-          ),
-        );
-      } else {
-        // Revert if API call failed
-        venues[index] = venues[index].copyWith(
-          isFavorite: currentFavorite,
-        );
-
-        print('❌ Failed to toggle favorite');
-
-        Get.snackbar(
-          'Lỗi',
-          result['message'] ?? 'Không thể cập nhật yêu thích',
-          backgroundColor: Colors.red.withOpacity(0.1),
-          colorText: Colors.red,
-          snackPosition: SnackPosition.TOP,
-        );
-      }
-    } catch (e) {
-      print('❌ Error toggling favorite: $e');
-
-      Get.snackbar(
-        'Lỗi kết nối',
-        'Không thể cập nhật yêu thích',
-        backgroundColor: Colors.red.withOpacity(0.1),
-        colorText: Colors.red,
-        snackPosition: SnackPosition.TOP,
-      );
-    }
+    Get.snackbar(
+      '✅ Đã cập nhật',
+      'Danh sách venue đã được làm mới',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.green.withOpacity(0.1),
+      colorText: Colors.green,
+      duration: const Duration(seconds: 2),
+      icon: const Icon(Icons.refresh, color: Colors.green),
+    );
   }
 
-  // ✅ SỬA: Navigate to venue detail với proper venueId
-  void navigateToVenueDetail(String venueId) {
-    if (venueId.isEmpty) {
-      Get.snackbar(
-        'Lỗi',
-        'ID venue không hợp lệ',
-        backgroundColor: Colors.red.withOpacity(0.1),
-        colorText: Colors.red,
-        snackPosition: SnackPosition.TOP,
-      );
-      return;
-    }
 
-    print('🔄 Navigating to venue detail: $venueId');
+  // ✅ Navigate - Convert int to String
+  void navigateToVenueDetail(int venueId) {
+    print('Navigating to venue detail: $venueId');
 
     Get.to(
-      () => DetailVenueScreen(venueId: venueId),
-      arguments: {'venueId': venueId},
+      () => DetailVenueScreen(venueId: venueId.toString()),
+      arguments: {'venueId': venueId.toString()},
       transition: Transition.rightToLeft,
       duration: const Duration(milliseconds: 300),
     );
   }
 
-  // ✅ SỬA: Search venues với API call
+  // ✅ Search venues
   Future<void> searchVenues(String query) async {
     try {
       isLoading.value = true;
       searchQuery.value = query;
-      currentPage.value = 0;
-      venues.clear();
 
-      print('🔍 Searching venues: "$query"');
+      print('Searching venues: "$query"');
 
       if (query.isEmpty) {
-        await loadVenues();
+        await loadVenues(isRefresh: true);
         return;
       }
 
-      // Call search API
       final response = await VenueService.searchVenues(
         query,
         page: 0,
@@ -228,13 +220,14 @@ class DashboardController extends GetxController {
       );
 
       if (response != null) {
-        final List<VenueDetailResponse> venueList =
-            response['venues'] as List<VenueDetailResponse>;
+        // ✅ Parse JSON trên isolate (background thread)
+        final List<VenueModel> venueList = await compute(
+          _parseVenues,
+          response['content'] as List,
+        );
 
-        venues.assignAll(venueList);
-
-        totalPages.value = response['totalPages'] ?? 0;
-        totalElements.value = response['totalElements'] ?? 0;
+        // ✅ Update UI một lần duy nhất
+        venues.value = venueList;
 
         print('✅ Search results: ${venueList.length} venues found');
 
@@ -264,14 +257,20 @@ class DashboardController extends GetxController {
     }
   }
 
-  // ✅ SỬA: Filter by price với API call
+  // ✅ Static method để parse trên isolate
+  static List<VenueModel> _parseVenues(List<dynamic> jsonList) {
+    return jsonList
+        .map((json) => VenueModel.fromJson(json as Map<String, dynamic>))
+        .toList();
+  }
+
+  // ✅ Filter by price using /api/posts/filter/price
   Future<void> filterByPrice(double minPrice, double maxPrice) async {
     try {
       isLoading.value = true;
-      currentPage.value = 0;
       venues.clear();
 
-      print('💰 Filtering by price: $minPrice - $maxPrice');
+      print('Filtering by price: $minPrice - $maxPrice');
 
       final response = await VenueService.filterByPriceRange(
         minPrice: minPrice,
@@ -281,13 +280,11 @@ class DashboardController extends GetxController {
       );
 
       if (response != null) {
-        final List<VenueDetailResponse> venueList =
-            response['venues'] as List<VenueDetailResponse>;
+        final List<VenueModel> venueList = (response['venues'] as List)
+            .map((json) => VenueModel.fromJson(json))
+            .toList();
 
         venues.assignAll(venueList);
-
-        totalPages.value = response['totalPages'] ?? 0;
-        totalElements.value = response['totalElements'] ?? 0;
 
         print('✅ Filter results: ${venueList.length} venues found');
 
@@ -295,7 +292,7 @@ class DashboardController extends GetxController {
           'Kết quả lọc',
           'Tìm thấy ${venueList.length} venue từ ${_formatPrice(minPrice)} - ${_formatPrice(maxPrice)}',
           snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.blue.withOpacity(0.1),
+          backgroundColor: Colors.transparent,
           colorText: Colors.blue.shade700,
           icon: const Icon(Icons.filter_list, color: Colors.blue),
         );
@@ -306,7 +303,7 @@ class DashboardController extends GetxController {
       Get.snackbar(
         'Lỗi lọc',
         'Không thể lọc địa điểm theo giá',
-        backgroundColor: Colors.red.withOpacity(0.1),
+        backgroundColor: Colors.transparent,
         colorText: Colors.red,
         snackPosition: SnackPosition.TOP,
       );
@@ -315,14 +312,13 @@ class DashboardController extends GetxController {
     }
   }
 
-  // Filter by capacity
+  // ✅ Filter by capacity using /api/posts/filter/capacity
   Future<void> filterByCapacity(int minCapacity) async {
     try {
       isLoading.value = true;
-      currentPage.value = 0;
       venues.clear();
 
-      print('👥 Filtering by capacity: $minCapacity+');
+      print('Filtering by capacity: $minCapacity+');
 
       final response = await VenueService.filterByCapacity(
         minCapacity: minCapacity,
@@ -331,8 +327,9 @@ class DashboardController extends GetxController {
       );
 
       if (response != null) {
-        final List<VenueDetailResponse> venueList =
-            response['venues'] as List<VenueDetailResponse>;
+        final List<VenueModel> venueList = (response['venues'] as List)
+            .map((json) => VenueModel.fromJson(json))
+            .toList();
 
         venues.assignAll(venueList);
 
@@ -342,7 +339,7 @@ class DashboardController extends GetxController {
           'Kết quả lọc',
           'Tìm thấy ${venueList.length} venue với sức chứa từ $minCapacity khách',
           snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.blue.withOpacity(0.1),
+          backgroundColor: Colors.transparent,
           colorText: Colors.blue.shade700,
         );
       }
@@ -361,159 +358,16 @@ class DashboardController extends GetxController {
     }
   }
 
-  // ✅ Load featured venues (popular)
-  Future<void> loadFeaturedVenues() async {
-    try {
-      isLoading.value = true;
-      currentPage.value = 0;
-      venues.clear();
-
-      print('🔥 Loading popular venues...');
-
-      final response = await VenueService.getPopularVenues(
-        page: 0,
-        size: 10,
-      );
-
-      if (response != null) {
-        final List<VenueDetailResponse> venueList =
-            response['venues'] as List<VenueDetailResponse>;
-
-        venues.assignAll(venueList);
-
-        print('✅ Popular venues loaded: ${venueList.length}');
-      }
-    } catch (e) {
-      print('❌ Error loading popular venues: $e');
-
-      Get.snackbar(
-        'Lỗi',
-        'Không thể tải venues phổ biến',
-        backgroundColor: Colors.red.withOpacity(0.1),
-        colorText: Colors.red,
-        snackPosition: SnackPosition.TOP,
-      );
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  // Load trending venues
-  Future<void> loadTrendingVenues() async {
-    try {
-      isLoading.value = true;
-      currentPage.value = 0;
-      venues.clear();
-
-      print('📈 Loading trending venues...');
-
-      final response = await VenueService.getTrendingVenues(
-        page: 0,
-        size: 10,
-      );
-
-      if (response != null) {
-        final List<VenueDetailResponse> venueList =
-            response['venues'] as List<VenueDetailResponse>;
-
-        venues.assignAll(venueList);
-
-        print('✅ Trending venues loaded: ${venueList.length}');
-      }
-    } catch (e) {
-      print('❌ Error loading trending venues: $e');
-
-      Get.snackbar(
-        'Lỗi',
-        'Không thể tải venues trending',
-        backgroundColor: Colors.red.withOpacity(0.1),
-        colorText: Colors.red,
-        snackPosition: SnackPosition.TOP,
-      );
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  // ✅ Load favorite venues
-  Future<void> loadFavoriteVenues() async {
-    try {
-      isLoading.value = true;
-      currentPage.value = 0;
-      venues.clear();
-
-      print('❤️ Loading favorite venues...');
-
-      final response = await VenueService.getFavoriteVenues(
-        page: 0,
-        size: 20,
-      );
-
-      if (response != null) {
-        final List<VenueDetailResponse> venueList =
-            response['venues'] as List<VenueDetailResponse>;
-
-        venues.assignAll(venueList);
-
-        print('✅ Favorite venues loaded: ${venueList.length}');
-
-        if (venueList.isEmpty) {
-          Get.snackbar(
-            'Chưa có yêu thích',
-            'Bạn chưa có venue yêu thích nào',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.orange.withOpacity(0.1),
-            colorText: Colors.orange.shade700,
-            icon: const Icon(Icons.favorite_border, color: Colors.orange),
-          );
-        }
-      }
-    } catch (e) {
-      print('❌ Error loading favorite venues: $e');
-
-      Get.snackbar(
-        'Lỗi',
-        'Không thể tải venues yêu thích',
-        backgroundColor: Colors.red.withOpacity(0.1),
-        colorText: Colors.red,
-        snackPosition: SnackPosition.TOP,
-      );
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  // Refresh venues
-  Future<void> refreshVenues() async {
-    print('🔄 Refreshing venues...');
-
-    currentPage.value = 0;
-    await loadVenues();
-
-    Get.snackbar(
-      '✅ Đã cập nhật',
-      'Danh sách venue đã được làm mới',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.green.withOpacity(0.1),
-      colorText: Colors.green,
-      duration: const Duration(seconds: 2),
-      icon: const Icon(Icons.refresh, color: Colors.green),
-    );
-  }
-
-  // Clear search
   void clearSearch() {
     searchQuery.value = '';
-    loadVenues();
+    loadVenues(isRefresh: true);
   }
 
   // Getters
   int get venuesCount => venues.length;
-  int get favoriteCount => venues.where((v) => v.isFavorite == true).length;
   bool get hasError => errorMessage.value.isNotEmpty;
-  bool get canLoadMore => hasMore.value && !isLoading.value;
+  bool get isEmpty => venues.isEmpty && !isLoading.value;
 
-  // Format price helper
   String _formatPrice(double price) {
     if (price >= 1000000) {
       return '${(price / 1000000).toStringAsFixed(1)} triệu';

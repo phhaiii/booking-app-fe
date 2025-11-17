@@ -1,4 +1,3 @@
-import 'package:booking_app/features/screen/list/budget_screen.dart';
 import 'package:booking_app/features/screen/list/calendar_screen.dart';
 import 'package:booking_app/features/screen/list/check_list_screen.dart';
 import 'package:booking_app/features/screen/list/bookingmanage_screen.dart'; 
@@ -46,13 +45,6 @@ class ListScreen extends StatelessWidget {
         subtitle: 'Lên lịch các sự kiện cưới và cuộc hẹn',
         color: Colors.blue,
         onTap: () => Get.to(() => const CalendarScreen()),
-      ),
-      PlanningItemData(
-        icon: Iconsax.chart,
-        title: 'Dự toán ngân sách',
-        subtitle: 'Theo dõi chi phí và ngân sách đám cưới',
-        color: Colors.green,
-        onTap: () => Get.to(() => const BudgetScreen()),
       ),
       PlanningItemData(
         icon: Iconsax.task_square,

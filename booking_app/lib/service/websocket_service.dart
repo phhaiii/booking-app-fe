@@ -10,7 +10,7 @@ class WebSocketService {
   final Function(String)? onConnectionStatusChanged;
   final Function(String)? onError;
 
-  static const String baseUrl = 'ws://10.0.2.2:8088'; // Thay đổi theo server của bạn
+  static const String baseUrl = 'ws://10.0.2.2:8089';
   bool _isConnected = false;
 
   WebSocketService({
@@ -24,8 +24,8 @@ class WebSocketService {
 
   Future<void> connect() async {
     try {
-      print('🔌 Connecting to WebSocket...');
-      
+      print('Connecting to WebSocket...');
+
       // Lấy token để authentication
       final token = await StorageService.getToken();
       if (token == null) {
@@ -44,22 +44,22 @@ class WebSocketService {
       // Lắng nghe tin nhắn
       _channel!.stream.listen(
         (data) {
-          print('📥 Received message: $data');
+          print('Received message: $data');
           try {
             final message = jsonDecode(data);
             onMessageReceived(message);
           } catch (e) {
-            print('❌ Error parsing message: $e');
+            print('Error parsing message: $e');
             onError?.call('Error parsing message: $e');
           }
         },
         onDone: () {
-          print('🔌 WebSocket connection closed');
+          print('WebSocket connection closed');
           _isConnected = false;
           onConnectionStatusChanged?.call('disconnected');
         },
         onError: (error) {
-          print('❌ WebSocket error: $error');
+          print('WebSocket error: $error');
           _isConnected = false;
           onError?.call('Connection error: $error');
           onConnectionStatusChanged?.call('error');
@@ -68,13 +68,12 @@ class WebSocketService {
 
       _isConnected = true;
       onConnectionStatusChanged?.call('connected');
-      print('✅ WebSocket connected successfully');
+      print('WebSocket connected successfully');
 
       // Subscribe to user's message queue
       _subscribeToUserMessages();
-
     } catch (e) {
-      print('❌ Failed to connect WebSocket: $e');
+      print('Failed to connect WebSocket: $e');
       _isConnected = false;
       onError?.call('Failed to connect: $e');
       onConnectionStatusChanged?.call('error');
@@ -86,9 +85,9 @@ class WebSocketService {
       'type': 'SUBSCRIBE',
       'destination': '/user/$userId/queue/messages',
     };
-    
+
     _channel?.sink.add(jsonEncode(subscribeMessage));
-    print('📝 Subscribed to user messages for user: $userId');
+    print('Subscribed to user messages for user: $userId');
   }
 
   void sendMessage({
@@ -116,9 +115,9 @@ class WebSocketService {
 
     try {
       _channel!.sink.add(jsonEncode(message));
-      print('📤 Message sent: $messageText');
+      print('Message sent: $messageText');
     } catch (e) {
-      print('❌ Error sending message: $e');
+      print('Error sending message: $e');
       onError?.call('Failed to send message: $e');
     }
   }
@@ -134,14 +133,14 @@ class WebSocketService {
 
     try {
       _channel!.sink.add(jsonEncode(message));
-      print('✅ Marked conversation $conversationId as read');
+      print('Marked conversation $conversationId as read');
     } catch (e) {
-      print('❌ Error marking as read: $e');
+      print('Error marking as read: $e');
     }
   }
 
   void disconnect() {
-    print('🔌 Disconnecting WebSocket...');
+    print('Disconnecting WebSocket...');
     _isConnected = false;
     _channel?.sink.close();
     _channel = null;

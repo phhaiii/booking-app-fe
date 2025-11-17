@@ -6,8 +6,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:booking_app/service/api.dart';
 import 'package:booking_app/service/storage_service.dart';
-import 'package:booking_app/models/user_response.dart';
-import 'package:booking_app/models/api_response.dart';
+import 'package:booking_app/response/user_response.dart';
 import 'package:booking_app/features/screen/login/login.dart';
 
 class ProfileController extends GetxController {
@@ -18,7 +17,7 @@ class ProfileController extends GetxController {
   final user = Rx<UserResponse?>(null);
   final isChangingPassword = false.obs;
 
-  // THÊM MỚI - Avatar management
+  // Avatar management
   var selectedAvatarPath = ''.obs;
   var isUploadingAvatar = false.obs;
   final ImagePicker _picker = ImagePicker();
@@ -33,22 +32,19 @@ class ProfileController extends GetxController {
   Future<void> loadUserProfile() async {
     try {
       isLoading.value = true;
-      print('Loading user profile...');
+      print('📥 Loading user profile...');
 
-      // Get user ID from storage
       final userId = await StorageService.getUserId();
       if (userId == null || userId.isEmpty) {
-        print('No user ID found in storage');
+        print('❌ No user ID found in storage');
         throw Exception('Không tìm thấy thông tin người dùng');
       }
 
-      print('User ID: $userId');
+      print('👤 User ID: $userId');
 
-      // Call API to get user profile
       final response = await ApiService.get('/users/$userId');
-      print('Profile response: $response');
+      print('📦 Profile response received');
 
-      // Parse response
       final apiResponse = ApiResponse<UserResponse>.fromJson(
         response,
         (data) => UserResponse.fromJson(data),
@@ -56,13 +52,15 @@ class ProfileController extends GetxController {
 
       if (apiResponse.success && apiResponse.data != null) {
         user.value = apiResponse.data;
-        print('User profile loaded successfully');
-        print('User: ${user.value?.toJson()}');
+        print('✅ User profile loaded successfully');
+        print('   Name: ${user.value?.fullName}');
+        print('   Email: ${user.value?.email}');
+        print('   Role: ${user.value?.role?.name}');
       } else {
         throw Exception(apiResponse.message);
       }
     } catch (e) {
-      print('Error loading profile: $e');
+      print('❌ Error loading profile: $e');
       Get.snackbar(
         'Lỗi',
         'Không thể tải thông tin cá nhân: $e',
@@ -216,7 +214,7 @@ class ProfileController extends GetxController {
     }
   }
 
-  // THÊM MỚI - Change profile picture method
+  // Change profile picture method
   Future<void> changeProfilePicture() async {
     try {
       // Show source selection dialog
@@ -234,7 +232,7 @@ class ProfileController extends GetxController {
       if (image != null) {
         isUploadingAvatar.value = true;
 
-        // Simulate upload process
+        // TODO: Upload to server
         await Future.delayed(const Duration(seconds: 2));
 
         // Update avatar path
@@ -262,7 +260,7 @@ class ProfileController extends GetxController {
     }
   }
 
-  // THÊM MỚI - Show image source selection dialog
+  // Show image source selection dialog
   Future<ImageSource?> _showImageSourceDialog() async {
     return await Get.dialog<ImageSource>(
       AlertDialog(
@@ -322,7 +320,7 @@ class ProfileController extends GetxController {
     );
   }
 
-  // THÊM MỚI - Remove profile picture
+  // Remove profile picture
   Future<void> removeProfilePicture() async {
     try {
       selectedAvatarPath.value = '';
@@ -346,32 +344,29 @@ class ProfileController extends GetxController {
     }
   }
 
-  // Helper methods for UI
+  // Helper methods for UI - chỉ sử dụng các field có trong UserResponse
   String get fullName => user.value?.fullName ?? 'Chưa cập nhật';
   String get email => user.value?.email ?? 'Chưa cập nhật';
   String get phone => user.value?.phone ?? 'Chưa cập nhật';
-  String get address => user.value?.address ?? 'Chưa cập nhật';
-  String get dateOfBirth => user.value?.dateOfBirth ?? 'Chưa cập nhật';
   String get userId => user.value?.id.toString() ?? 'Chưa có';
 
-  // Format date for display
-  String get formattedDateOfBirth {
-    if (user.value?.dateOfBirth == null || user.value!.dateOfBirth!.isEmpty) {
-      return 'Chưa cập nhật';
-    }
+  // Role information
+  String get roleName => user.value?.role?.name ?? 'USER';
+  int? get roleId => user.value?.role?.id;
 
-    try {
-      final date = DateTime.parse(user.value!.dateOfBirth!);
-      return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
-    } catch (e) {
-      return user.value!.dateOfBirth!;
-    }
-  }
+  // Check user role
+  bool get isAdmin => roleName == 'ADMIN';
+  bool get isVendor => roleName == 'VENDOR';
+  bool get isUser => roleName == 'USER';
 
-  // Current avatar (fallback to default if no custom avatar)
+  // Current avatar (from server or local selected)
   String get currentAvatar {
-    return selectedAvatarPath.value.isNotEmpty
-        ? selectedAvatarPath.value
-        : WImages.splash;
+    if (selectedAvatarPath.value.isNotEmpty) {
+      return selectedAvatarPath.value;
+    }
+    if (user.value?.avatar != null && user.value!.avatar!.isNotEmpty) {
+      return user.value!.avatar!;
+    }
+    return WImages.splash;
   }
 }

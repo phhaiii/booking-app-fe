@@ -59,13 +59,13 @@ class CreatePostScreen extends StatelessWidget {
 
   AppBar _buildAppBar(CreatePostController controller) {
     return AppBar(
-      title: const Text(
-        'Tạo Bài Viết',
-        style: TextStyle(
-          color: WColors.primary,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
+      title: Obx(() => Text(
+            controller.isEditMode.value ? 'Chỉnh Sửa Bài Viết' : 'Tạo Bài Viết',
+            style: const TextStyle(
+              color: WColors.primary,
+              fontWeight: FontWeight.bold,
+            ),
+          )),
       centerTitle: true,
       backgroundColor: Colors.transparent,
       elevation: 0,

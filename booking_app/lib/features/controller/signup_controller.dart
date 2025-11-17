@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:booking_app/service/api.dart';
 import 'package:booking_app/service/storage_service.dart';
 import 'package:booking_app/navigation_menu.dart';
-import 'package:booking_app/models/auth_response.dart';
-import 'package:booking_app/models/register_request.dart';
+import 'package:booking_app/response/auth_response.dart';
+import 'package:booking_app/request/register_request.dart';
 import 'dart:convert';
 
 class SignupController extends GetxController {
@@ -19,14 +19,14 @@ class SignupController extends GetxController {
   final emailController = TextEditingController();
   final phoneController = TextEditingController();
   final passwordController = TextEditingController();
-  final confirmPasswordController = TextEditingController(); 
+  final confirmPasswordController = TextEditingController();
   final addressController = TextEditingController();
   final dateOfBirthController = TextEditingController();
 
   // Observable variables
   final isLoading = false.obs;
   final isPasswordHidden = true.obs;
-  final isConfirmPasswordHidden = true.obs; 
+  final isConfirmPasswordHidden = true.obs;
   final termsAccepted = false.obs;
   final selectedDate = Rx<DateTime?>(null);
 
@@ -38,7 +38,7 @@ class SignupController extends GetxController {
     isPasswordHidden.value = !isPasswordHidden.value;
   }
 
-  // Toggle confirm password visibility - THÊM MỚI
+  // Toggle confirm password visibility
   void toggleConfirmPasswordVisibility() {
     isConfirmPasswordHidden.value = !isConfirmPasswordHidden.value;
   }
@@ -109,7 +109,7 @@ class SignupController extends GetxController {
     return null;
   }
 
-  // Validate phone - theo pattern backend
+  // Validate phone
   String? validatePhone(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'Vui lòng nhập số điện thoại';
@@ -136,7 +136,7 @@ class SignupController extends GetxController {
     return null;
   }
 
-  // Validate confirm password - THÊM MỚI
+  // Validate confirm password
   String? validateConfirmPassword(String? value) {
     if (value == null || value.isEmpty) {
       return 'Vui lòng xác nhận mật khẩu';
@@ -179,22 +179,22 @@ class SignupController extends GetxController {
 
   // Signup function
   Future<void> signup() async {
-    print('Starting signup process...');
+    print('🚀 Starting signup process...');
 
     // Validate form
     if (!signupFormKey.currentState!.validate()) {
-      print('Form validation failed');
+      print('❌ Form validation failed');
       return;
     }
 
     // Check terms acceptance
     if (!termsAccepted.value) {
-      print('Terms not accepted');
+      print('❌ Terms not accepted');
       Get.snackbar(
         'Lỗi',
         'Vui lòng đồng ý với điều khoản sử dụng',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.transparent,
+        backgroundColor: Colors.red.withOpacity(0.1),
         colorText: Colors.red,
         duration: const Duration(seconds: 2),
       );
@@ -203,9 +203,9 @@ class SignupController extends GetxController {
 
     try {
       isLoading.value = true;
-      print('Setting loading state to true');
+      print('⏳ Setting loading state to true');
 
-      // Prepare data according to backend requirements
+      // Prepare data
       final firstName = firstNameController.text.trim();
       final lastName = lastNameController.text.trim();
       final fullName = '$firstName $lastName'.trim();
@@ -217,14 +217,14 @@ class SignupController extends GetxController {
           ? _formatDateForApi(selectedDate.value!)
           : '';
 
-      print('Prepared data:');
-      print('FullName: $fullName');
-      print('Email: $email');
-      print('Phone: $phone');
-      print('Address: $address');
-      print('DateOfBirth: $dateOfBirth');
+      print('📝 Prepared data:');
+      print('   FullName: $fullName');
+      print('   Email: $email');
+      print('   Phone: $phone');
+      print('   Address: $address');
+      print('   DateOfBirth: $dateOfBirth');
 
-      // Validate fullName length according to backend
+      // Validate fullName length
       if (fullName.isEmpty || fullName.length > 100) {
         throw Exception('Họ tên không được để trống và không quá 100 ký tự');
       }
@@ -239,16 +239,17 @@ class SignupController extends GetxController {
         dateOfBirth: dateOfBirth,
       );
 
-      print('Sending registration request: ${registerRequest.toJson()}');
-      // Call API
+      print('📤 Sending registration request to /api/auth/register');
+
+      // Call API - endpoint theo backend: /api/auth/register
       final response = await ApiService.postNoAuth(
         '/auth/register',
         body: registerRequest.toJson(),
       );
 
-      print('Registration response received: $response');
+      print('📥 Registration response received');
 
-      // Check if response is null or empty
+      // Check if response is null
       if (response == null) {
         throw Exception('Server không phản hồi');
       }
@@ -263,81 +264,118 @@ class SignupController extends GetxController {
         throw Exception('Định dạng phản hồi không hợp lệ');
       }
 
-      print('Parsed response: $responseMap');
+      print('📋 Parsed response: $responseMap');
 
+      // Parse ApiResponse wrapper from backend
       final success = responseMap['success'] ?? false;
       final message = responseMap['message'] ?? '';
       final data = responseMap['data'];
 
-      if (success && data != null) {
-        // Extract and save user data
-        final accessToken = data['accessToken'] ?? '';
-        final refreshToken = data['refreshToken'] ?? '';
-        final userData = data['user'] ?? {};
-
-        if (accessToken.isEmpty || refreshToken.isEmpty) {
-          throw Exception('Token không hợp lệ từ server');
-        }
-
-        await StorageService.saveToken(accessToken);
-        await StorageService.saveRefreshToken(refreshToken);
-
-        if (userData['id'] != null) {
-          await StorageService.saveUserId(userData['id'].toString());
-        }
-        if (userData['email'] != null) {
-          await StorageService.saveEmail(userData['email'].toString());
-        }
-
-        await StorageService.saveUserData(userData);
-
-        print('User data saved successfully');
-
-        Get.snackbar(
-          'Thành công',
-          'Đăng ký tài khoản thành công!',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.transparent,
-          colorText: Colors.green,
-          duration: const Duration(seconds: 2),
-        );
-
-        // Clear controllers
-        _clearControllers();
-
-        // Navigate to home screen
-        await Future.delayed(const Duration(milliseconds: 500));
-        Get.offAll(() => NavigationMenu());
-
-        print('🎉 Signup completed successfully!');
-      } else {
+      if (!success) {
         throw Exception(message.isNotEmpty ? message : 'Đăng ký thất bại');
       }
+
+      if (data == null) {
+        throw Exception('Dữ liệu phản hồi không hợp lệ');
+      }
+
+      // Parse AuthResponse
+      final authResponse = AuthResponse.fromJson(data);
+
+      // Validate tokens
+      if (authResponse.accessToken.isEmpty || authResponse.refreshToken.isEmpty) {
+        throw Exception('Token không hợp lệ từ server');
+      }
+
+      print('✅ Tokens received successfully');
+
+      // Save tokens
+      await StorageService.saveToken(authResponse.accessToken);
+      await StorageService.saveRefreshToken(authResponse.refreshToken);
+
+      // Extract user data
+      final user = authResponse.user;
+      final userId = user.id.toString();
+      final userEmail = user.email;
+      final userFullName = user.fullName;
+      final userPhone = user.phone ?? phone;
+      final userAvatar = user.avatar;
+
+      // Extract role
+      final userRole = user.role?.name ?? 'USER';
+      final userRoleId = user.role?.id;
+
+      print('👤 User data extracted:');
+      print('   ID: $userId');
+      print('   Email: $userEmail');
+      print('   Full Name: $userFullName');
+      print('   Role: $userRole (ID: $userRoleId)');
+
+      // Save user data
+      await StorageService.saveUserData(
+        userId: userId,
+        email: userEmail,
+        role: userRole,
+        roleId: userRoleId,
+        fullName: userFullName,
+        phone: userPhone,
+        avatarUrl: userAvatar,
+      );
+
+      print('✅ User data saved to storage');
+
+      // Show success message
+      Get.snackbar(
+        'Thành công',
+        message.isNotEmpty ? message : 'Đăng ký tài khoản thành công!',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green.withOpacity(0.1),
+        colorText: Colors.green,
+        duration: const Duration(seconds: 2),
+        icon: const Icon(Icons.check_circle, color: Colors.green),
+      );
+
+      // Clear controllers
+      _clearControllers();
+
+      // Navigate to home screen
+      await Future.delayed(const Duration(milliseconds: 500));
+      Get.offAll(() => NavigationMenu());
+
+      print('🎉 Signup completed successfully!');
     } catch (e) {
-      print('Signup error occurred: $e');
+      print('❌ Signup error: $e');
 
       String errorMessage = 'Đã có lỗi xảy ra';
 
       if (e.toString().contains('Exception:')) {
         errorMessage = e.toString().replaceAll('Exception: ', '');
-      } else if (e.toString().contains('email already exists')) {
+      } else if (e.toString().contains('email already exists') ||
+          e.toString().contains('Email đã tồn tại')) {
         errorMessage = 'Email này đã được sử dụng';
-      } else if (e.toString().contains('phone already exists')) {
+      } else if (e.toString().contains('phone already exists') ||
+          e.toString().contains('Số điện thoại đã tồn tại')) {
         errorMessage = 'Số điện thoại này đã được sử dụng';
       } else if (e.toString().contains('SocketException')) {
         errorMessage = 'Không thể kết nối tới server';
+      } else if (e.toString().contains('FormatException')) {
+        errorMessage = 'Dữ liệu không hợp lệ';
+      } else if (e.toString().contains('TimeoutException')) {
+        errorMessage = 'Kết nối bị timeout';
       }
 
       Get.snackbar(
         'Lỗi đăng ký',
         errorMessage,
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.transparent,
+        backgroundColor: Colors.red.withOpacity(0.1),
         colorText: Colors.red,
         duration: const Duration(seconds: 4),
+        icon: const Icon(Icons.error_outline, color: Colors.red),
       );
     } finally {
       isLoading.value = false;
+      print('⏹️ Loading state set to false');
     }
   }
 
@@ -347,7 +385,7 @@ class SignupController extends GetxController {
     emailController.clear();
     phoneController.clear();
     passwordController.clear();
-    confirmPasswordController.clear(); 
+    confirmPasswordController.clear();
     addressController.clear();
     dateOfBirthController.clear();
     selectedDate.value = null;
@@ -361,7 +399,7 @@ class SignupController extends GetxController {
     emailController.dispose();
     phoneController.dispose();
     passwordController.dispose();
-    confirmPasswordController.dispose(); 
+    confirmPasswordController.dispose();
     addressController.dispose();
     dateOfBirthController.dispose();
     super.onClose();

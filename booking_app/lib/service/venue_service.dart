@@ -1,17 +1,125 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:booking_app/models/venuedetail_response.dart';
-import 'package:booking_app/service/api_constants.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:booking_app/service/storage_service.dart';
+import 'package:booking_app/response/venuedetail_response.dart';
+import 'package:booking_app/utils/helpers/role_helper.dart';
+import 'api_constants.dart';
 
 class VenueService {
-  // ============================================================================
-  // VENUE/POST CRUD OPERATIONS
-  // ============================================================================
+  // ✅ Base URL
+  static const String baseUrl = 'http://10.0.2.2:8089/api';
 
-  /// Get all published venues/posts with pagination
+  // ✅ Headers helper
+  static Future<Map<String, String>> _getHeaders() async {
+    final token = await StorageService.getToken();
+    return {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+  }
+
+  // =====================================================
+  // 🔐 PERMISSION HELPERS - USING RoleHelper
+  // =====================================================
+
+  /// ✅ Check if current user can create posts
+  static Future<bool> canCreatePost() async {
+    return await RoleHelper.canCreatePost();
+  }
+
+  /// ✅ Check if current user can edit specific post
+  static Future<bool> canEditPost(String postOwnerId) async {
+    return await RoleHelper.canEditPost(postOwnerId);
+  }
+
+  /// ✅ Check if current user can delete specific post
+  static Future<bool> canDeletePost(String postOwnerId) async {
+    return await RoleHelper.canDeletePost(postOwnerId);
+  }
+
+  /// ✅ Check if current user can manage bookings
+  static Future<bool> canManageBookings() async {
+    return await RoleHelper.canManageBookings();
+  }
+
+  /// ✅ Check if current user is admin
+  static Future<bool> isAdmin() async {
+    return await RoleHelper.isAdmin();
+  }
+
+  /// ✅ Check if current user is vendor
+  static Future<bool> isVendor() async {
+    return await RoleHelper.isVendor();
+  }
+
+  /// ✅ Check if current user is regular user
+  static Future<bool> isUser() async {
+    return await RoleHelper.isUser();
+  }
+
+  // =====================================================
+  // 🔍 TEST CONNECTION
+  // =====================================================
+
+  static Future<bool> testConnection() async {
+    try {
+      print('═══════════════════════════════════════');
+      print('TESTING BACKEND CONNECTION');
+      print('═══════════════════════════════════════');
+      print('URL: $baseUrl/posts');
+
+      final uri = Uri.parse('$baseUrl/posts');
+      print('  - Scheme: ${uri.scheme}');
+      print('  - Host: ${uri.host}');
+      print('  - Port: ${uri.port}');
+      print('  - Path: ${uri.path}');
+
+      final response = await http
+          .get(
+            uri,
+            headers: await _getHeaders(),
+          )
+          .timeout(const Duration(seconds: 5));
+
+      print('Response: ${response.statusCode}');
+      print('═══════════════════════════════════════');
+
+      final isOk = response.statusCode == 200 ||
+          response.statusCode == 401 ||
+          response.statusCode == 403;
+
+      if (isOk) {
+        print('✅ Backend is REACHABLE');
+      } else {
+        print('⚠️ Backend returned: ${response.statusCode}');
+      }
+
+      return isOk;
+    } on TimeoutException catch (e) {
+      print('═══════════════════════════════════════');
+      print('CONNECTION TIMEOUT');
+      print('═══════════════════════════════════════');
+      print('Error: $e');
+      return false;
+    } catch (e) {
+      print('═══════════════════════════════════════');
+      print('CONNECTION ERROR');
+      print('═══════════════════════════════════════');
+      print('Error: $e');
+      return false;
+    }
+  }
+
+  // =====================================================
+  // 🏢 VENUE/POST CRUD OPERATIONS
+  // =====================================================
+
+  /// ✅ Get all published venues (PUBLIC - No auth required)
+  /// Accessible by: EVERYONE
   static Future<Map<String, dynamic>?> getAllVenues({
     int page = 0,
     int size = 10,
@@ -19,264 +127,143 @@ class VenueService {
     String sortDir = 'desc',
   }) async {
     try {
-      final uri = Uri.parse(
-        '${ApiConstants.baseUrl}/posts?page=$page&size=$size&sortBy=$sortBy&sortDir=$sortDir',
-      );
+      print('Fetching venues: page=$page, size=$size');
+
+      final url =
+          '$baseUrl/posts?page=$page&size=$size&sortBy=$sortBy&sortDir=$sortDir';
+      print('URL: $url');
 
       final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${await _getAuthToken()}',
-        },
+        Uri.parse(url),
+        headers: await _getHeaders(),
       );
 
+      print('📥 Response status: ${response.statusCode}');
+
       if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
+        final jsonData = json.decode(response.body);
 
-        if (jsonData['success'] == true && jsonData['data'] != null) {
+        if (jsonData['data'] != null) {
           final data = jsonData['data'];
-          final List<dynamic> content = data['content'] ?? [];
-
           return {
-            'venues': content
-                .map((item) => VenueDetailResponse.fromJson(item))
-                .toList(),
+            'venues': data['content'] ?? data['posts'] ?? [],
             'totalPages': data['totalPages'] ?? 0,
             'totalElements': data['totalElements'] ?? 0,
-            'currentPage': data['number'] ?? 0,
-            'hasNext': !(data['last'] ?? true),
+            'hasNext': data['hasNext'] ?? false,
+            'currentPage': data['number'] ?? page,
+          };
+        }
+
+        if (jsonData['content'] != null || jsonData['posts'] != null) {
+          return {
+            'venues': jsonData['content'] ?? jsonData['posts'] ?? [],
+            'totalPages': jsonData['totalPages'] ?? 0,
+            'totalElements': jsonData['totalElements'] ?? 0,
+            'hasNext': jsonData['hasNext'] ?? false,
+            'currentPage': jsonData['number'] ?? page,
+          };
+        }
+
+        if (jsonData is List) {
+          return {
+            'venues': jsonData,
+            'totalPages': 1,
+            'totalElements': jsonData.length,
+            'hasNext': false,
+            'currentPage': 0,
           };
         }
       }
 
-      print('Failed to fetch venues: ${response.statusCode}');
+      print('❌ Unexpected response or error');
       return null;
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('Error fetching venues: $e');
+      print('Stack trace: $stackTrace');
       return null;
     }
   }
 
-  /// Get venue details by ID
-  static Future<VenueDetailResponse?> getVenueDetails(String venueId) async {
+  /// ✅ Get venue detail by ID (PUBLIC)
+  /// Accessible by: EVERYONE
+  static Future<VenueDetailResponse> getVenueDetail(String venueId) async {
     try {
-      final uri = Uri.parse('${ApiConstants.baseUrl}/posts/$venueId');
+      print('Fetching venue: $venueId');
+
+      // ✅ ĐÚNG: Có /api cho API endpoint
+      final url = '${ApiConstants.baseUrl}/api/posts/$venueId';
+      print('URL: $url');
 
       final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${await _getAuthToken()}',
-        },
+        Uri.parse(url),
+        headers: await _getHeaders(),
       );
 
+      print('📥 Response: ${response.statusCode}');
+
       if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
+        final jsonData = json.decode(response.body);
+
+        // ✅ Check response structure
+        print('📄 Response structure: ${jsonData.keys}');
 
         if (jsonData['success'] == true && jsonData['data'] != null) {
-          return VenueDetailResponse.fromJson(jsonData['data']);
+          final venueData = jsonData['data'];
+          print('📄 Raw images: ${venueData['images']}');
+          print('⭐ Rating: ${venueData['rating']}');
+          print('📊 ReviewCount: ${venueData['reviewCount']}');
+          print('💬 CommentCount: ${venueData['commentCount']}');
+
+          // 🔍 DEBUG: Print toàn bộ venue data
+          print('🔍 Full venue data keys: ${venueData.keys.toList()}');
+
+          return VenueDetailResponse.fromJson(venueData);
         }
+
+        throw Exception('Invalid response format');
       }
 
-      print('Failed to fetch venue details: ${response.statusCode}');
-      return null;
+      throw Exception('Failed to load venue: ${response.statusCode}');
     } catch (e) {
-      print('Error fetching venue details: $e');
-      return null;
+      print('Error: $e');
+      rethrow;
     }
   }
 
-  /// Get venues by vendor ID
-  static Future<Map<String, dynamic>?> getVenuesByVendor(
-    String vendorId, {
-    int page = 0,
-    int size = 10,
-  }) async {
-    try {
-      final uri = Uri.parse(
-        '${ApiConstants.baseUrl}/posts/vendor/$vendorId?page=$page&size=$size',
-      );
+  // =====================================================
+  // 🔍 SEARCH & FILTER (PUBLIC)
+  // =====================================================
 
-      final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
-
-        if (jsonData['success'] == true && jsonData['data'] != null) {
-          final data = jsonData['data'];
-          final List<dynamic> content = data['content'] ?? [];
-
-          return {
-            'venues': content
-                .map((item) => VenueDetailResponse.fromJson(item))
-                .toList(),
-            'totalPages': data['totalPages'] ?? 0,
-            'totalElements': data['totalElements'] ?? 0,
-          };
-        }
-      }
-
-      return null;
-    } catch (e) {
-      print('Error fetching vendor venues: $e');
-      return null;
-    }
-  }
-
-  // ============================================================================
-  // FAVORITE OPERATIONS
-  // ============================================================================
-
-  /// Toggle favorite status for a venue
-  static Future<Map<String, dynamic>> toggleFavorite(String venueId) async {
-    try {
-      final uri = Uri.parse('${ApiConstants.baseUrl}/posts/$venueId/favorite');
-
-      final response = await http.post(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${await _getAuthToken()}',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
-
-        return {
-          'success': jsonData['success'] ?? false,
-          'isFavorite': jsonData['data'] ?? false,
-          'message': jsonData['message'] ?? '',
-        };
-      }
-
-      return {
-        'success': false,
-        'isFavorite': false,
-        'message': 'Failed to toggle favorite',
-      };
-    } catch (e) {
-      print('Error toggling favorite: $e');
-      return {
-        'success': false,
-        'isFavorite': false,
-        'message': 'Error: $e',
-      };
-    }
-  }
-
-  /// Check if venue is in favorites
-  static Future<bool> isFavorite(String venueId) async {
-    try {
-      final uri =
-          Uri.parse('${ApiConstants.baseUrl}/posts/$venueId/favorite/status');
-
-      final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${await _getAuthToken()}',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
-        return jsonData['data'] == true;
-      }
-
-      return false;
-    } catch (e) {
-      print('Error checking favorite status: $e');
-      return false;
-    }
-  }
-
-  /// Get all favorite venues
-  static Future<Map<String, dynamic>?> getFavoriteVenues({
-    int page = 0,
-    int size = 10,
-  }) async {
-    try {
-      final uri = Uri.parse(
-        '${ApiConstants.baseUrl}/posts/favorites?page=$page&size=$size',
-      );
-
-      final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${await _getAuthToken()}',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
-
-        if (jsonData['success'] == true && jsonData['data'] != null) {
-          final data = jsonData['data'];
-          final List<dynamic> content = data['content'] ?? [];
-
-          return {
-            'venues': content
-                .map((item) => VenueDetailResponse.fromJson(item))
-                .toList(),
-            'totalPages': data['totalPages'] ?? 0,
-            'totalElements': data['totalElements'] ?? 0,
-            'currentPage': data['number'] ?? 0,
-          };
-        }
-      }
-
-      return null;
-    } catch (e) {
-      print('Error fetching favorite venues: $e');
-      return null;
-    }
-  }
-
-  // ============================================================================
-  // SEARCH & FILTER OPERATIONS
-  // ============================================================================
-
-  /// Search venues by keyword
+  /// ✅ Search venues by keyword (PUBLIC)
+  /// Accessible by: EVERYONE
   static Future<Map<String, dynamic>?> searchVenues(
     String keyword, {
     int page = 0,
-    int size = 10,
+    int size = 20,
   }) async {
     try {
-      final encodedKeyword = Uri.encodeComponent(keyword);
-      final uri = Uri.parse(
-        '${ApiConstants.baseUrl}/posts/search?keyword=$encodedKeyword&page=$page&size=$size',
-      );
+      print('Searching venues: "$keyword"');
+
+      final url =
+          '$baseUrl/posts/search?keyword=$keyword&page=$page&size=$size';
+      print('URL: $url');
 
       final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        Uri.parse(url),
+        headers: await _getHeaders(),
       );
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
+        final jsonData = jsonDecode(response.body);
 
         if (jsonData['success'] == true && jsonData['data'] != null) {
           final data = jsonData['data'];
-          final List<dynamic> content = data['content'] ?? [];
 
           return {
-            'venues': content
-                .map((item) => VenueDetailResponse.fromJson(item))
-                .toList(),
-            'totalPages': data['totalPages'] ?? 0,
+            'venues': data['content'] ?? [],
             'totalElements': data['totalElements'] ?? 0,
-            'currentPage': data['number'] ?? 0,
+            'totalPages': data['totalPages'] ?? 0,
+            'currentPage': data['number'] ?? page,
           };
         }
       }
@@ -288,38 +275,36 @@ class VenueService {
     }
   }
 
-  /// Filter venues by price range
+  /// ✅ Filter by price range (PUBLIC)
+  /// Accessible by: EVERYONE
   static Future<Map<String, dynamic>?> filterByPriceRange({
     required double minPrice,
     required double maxPrice,
     int page = 0,
-    int size = 10,
+    int size = 20,
   }) async {
     try {
-      final uri = Uri.parse(
-        '${ApiConstants.baseUrl}/posts/filter/price?minPrice=$minPrice&maxPrice=$maxPrice&page=$page&size=$size',
-      );
+      print('Filtering by price: $minPrice - $maxPrice');
+
+      final url =
+          '$baseUrl/posts/filter/price?minPrice=$minPrice&maxPrice=$maxPrice&page=$page&size=$size';
+      print('📍 URL: $url');
 
       final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        Uri.parse(url),
+        headers: await _getHeaders(),
       );
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
+        final jsonData = jsonDecode(response.body);
 
         if (jsonData['success'] == true && jsonData['data'] != null) {
           final data = jsonData['data'];
-          final List<dynamic> content = data['content'] ?? [];
 
           return {
-            'venues': content
-                .map((item) => VenueDetailResponse.fromJson(item))
-                .toList(),
-            'totalPages': data['totalPages'] ?? 0,
+            'venues': data['content'] ?? [],
             'totalElements': data['totalElements'] ?? 0,
+            'totalPages': data['totalPages'] ?? 0,
           };
         }
       }
@@ -331,41 +316,43 @@ class VenueService {
     }
   }
 
-  /// Filter venues by minimum capacity
+  /// ✅ Filter by capacity (PUBLIC)
+  /// Accessible by: EVERYONE
   static Future<Map<String, dynamic>?> filterByCapacity({
     required int minCapacity,
     int page = 0,
-    int size = 10,
+    int size = 20,
   }) async {
     try {
-      final uri = Uri.parse(
-        '${ApiConstants.baseUrl}/posts/filter/capacity?minCapacity=$minCapacity&page=$page&size=$size',
-      );
+      print('👥 Filtering by capacity: min=$minCapacity');
+
+      final url =
+          '$baseUrl/posts/filter/capacity?minCapacity=$minCapacity&page=$page&size=$size';
+      print('📍 URL: $url');
 
       final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        Uri.parse(url),
+        headers: await _getHeaders(),
       );
 
+      print('📥 Response status: ${response.statusCode}');
+
       if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
+        final jsonData = jsonDecode(response.body);
 
         if (jsonData['success'] == true && jsonData['data'] != null) {
           final data = jsonData['data'];
-          final List<dynamic> content = data['content'] ?? [];
 
           return {
-            'venues': content
-                .map((item) => VenueDetailResponse.fromJson(item))
-                .toList(),
-            'totalPages': data['totalPages'] ?? 0,
+            'venues': data['content'] ?? [],
             'totalElements': data['totalElements'] ?? 0,
+            'totalPages': data['totalPages'] ?? 0,
+            'currentPage': data['number'] ?? page,
           };
         }
       }
 
+      print('⚠️ Failed to filter by capacity');
       return null;
     } catch (e) {
       print('Error filtering by capacity: $e');
@@ -373,317 +360,121 @@ class VenueService {
     }
   }
 
-  /// Filter venues by style
-  static Future<Map<String, dynamic>?> filterByStyle({
-    required String style,
-    int page = 0,
-    int size = 10,
-  }) async {
+  // =====================================================
+  // ❤️ FAVORITE/LIKE (AUTHENTICATED)
+  // =====================================================
+
+  /// ✅ Toggle favorite (like/unlike)
+  /// Accessible by: USER, VENDOR, ADMIN (authenticated users)
+  /// 🔒 REQUIRES: Authentication
+  static Future<Map<String, dynamic>> toggleFavorite(String venueId) async {
     try {
-      final encodedStyle = Uri.encodeComponent(style);
-      final uri = Uri.parse(
-        '${ApiConstants.baseUrl}/posts/filter/style?style=$encodedStyle&page=$page&size=$size',
-      );
+      print('❤️ Toggling favorite for venue: $venueId');
 
-      final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
-
-        if (jsonData['success'] == true && jsonData['data'] != null) {
-          final data = jsonData['data'];
-          final List<dynamic> content = data['content'] ?? [];
-
-          return {
-            'venues': content
-                .map((item) => VenueDetailResponse.fromJson(item))
-                .toList(),
-            'totalPages': data['totalPages'] ?? 0,
-            'totalElements': data['totalElements'] ?? 0,
-          };
-        }
+      // ✅ Check authentication
+      final token = await StorageService.getToken();
+      if (token == null || token.isEmpty) {
+        return {
+          'success': false,
+          'message': 'Vui lòng đăng nhập để thực hiện chức năng này',
+        };
       }
-
-      return null;
-    } catch (e) {
-      print('Error filtering by style: $e');
-      return null;
-    }
-  }
-
-  /// Get popular venues (sorted by view count)
-  static Future<Map<String, dynamic>?> getPopularVenues({
-    int page = 0,
-    int size = 10,
-  }) async {
-    try {
-      final uri = Uri.parse(
-        '${ApiConstants.baseUrl}/posts/popular?page=$page&size=$size',
-      );
-
-      final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
-
-        if (jsonData['success'] == true && jsonData['data'] != null) {
-          final data = jsonData['data'];
-          final List<dynamic> content = data['content'] ?? [];
-
-          return {
-            'venues': content
-                .map((item) => VenueDetailResponse.fromJson(item))
-                .toList(),
-            'totalPages': data['totalPages'] ?? 0,
-            'totalElements': data['totalElements'] ?? 0,
-          };
-        }
-      }
-
-      return null;
-    } catch (e) {
-      print('Error fetching popular venues: $e');
-      return null;
-    }
-  }
-
-  /// Get trending venues (sorted by booking count)
-  static Future<Map<String, dynamic>?> getTrendingVenues({
-    int page = 0,
-    int size = 10,
-  }) async {
-    try {
-      final uri = Uri.parse(
-        '${ApiConstants.baseUrl}/posts/trending?page=$page&size=$size',
-      );
-
-      final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
-
-        if (jsonData['success'] == true && jsonData['data'] != null) {
-          final data = jsonData['data'];
-          final List<dynamic> content = data['content'] ?? [];
-
-          return {
-            'venues': content
-                .map((item) => VenueDetailResponse.fromJson(item))
-                .toList(),
-            'totalPages': data['totalPages'] ?? 0,
-            'totalElements': data['totalElements'] ?? 0,
-          };
-        }
-      }
-
-      return null;
-    } catch (e) {
-      print('Error fetching trending venues: $e');
-      return null;
-    }
-  }
-
-  // ============================================================================
-  // COMMENT/REVIEW OPERATIONS
-  // ============================================================================
-
-  /// Get venue comments/reviews with pagination
-  static Future<Map<String, dynamic>?> getVenueComments(
-    String venueId, {
-    int page = 0,
-    int size = 10,
-  }) async {
-    try {
-      final uri = Uri.parse(
-        '${ApiConstants.baseUrl}/comments/post/$venueId?page=$page&size=$size',
-      );
-
-      final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
-
-        if (jsonData['success'] == true && jsonData['data'] != null) {
-          final data = jsonData['data'];
-          final List<dynamic> content = data['content'] ?? [];
-
-          return {
-            'comments':
-                content.map((item) => VenueComment.fromJson(item)).toList(),
-            'totalPages': data['totalPages'] ?? 0,
-            'totalElements': data['totalElements'] ?? 0,
-            'currentPage': data['number'] ?? 0,
-            'averageRating': data['averageRating'] ?? 0.0,
-          };
-        }
-      }
-
-      return null;
-    } catch (e) {
-      print('Error fetching comments: $e');
-      return null;
-    }
-  }
-
-  /// Add a new comment/review
-  static Future<VenueComment?> addComment(
-    String venueId, {
-    required String content,
-    required double rating,
-    List<String>? imagePaths,
-  }) async {
-    try {
-      var request = http.MultipartRequest(
-        'POST',
-        Uri.parse('${ApiConstants.baseUrl}/comments'),
-      );
-
-      // Add headers
-      request.headers.addAll({
-        'Authorization': 'Bearer ${await _getAuthToken()}',
-      });
-
-      // Add fields
-      request.fields['postId'] = venueId;
-      request.fields['content'] = content;
-      request.fields['rating'] = rating.toString();
-
-      // Add images if provided
-      if (imagePaths != null && imagePaths.isNotEmpty) {
-        for (var imagePath in imagePaths) {
-          final file = File(imagePath);
-          if (await file.exists()) {
-            var multipartFile = await http.MultipartFile.fromPath(
-              'images',
-              file.path,
-              contentType: MediaType('image', 'jpeg'),
-            );
-            request.files.add(multipartFile);
-          }
-        }
-      }
-
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
-
-        if (jsonData['success'] == true && jsonData['data'] != null) {
-          return VenueComment.fromJson(jsonData['data']);
-        }
-      }
-
-      print('Failed to add comment: ${response.statusCode}');
-      return null;
-    } catch (e) {
-      print('Error adding comment: $e');
-      return null;
-    }
-  }
-
-  /// Update an existing comment
-  static Future<VenueComment?> updateComment(
-    String commentId, {
-    required String content,
-    required double rating,
-  }) async {
-    try {
-      final uri = Uri.parse('${ApiConstants.baseUrl}/comments/$commentId');
-
-      final response = await http.put(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${await _getAuthToken()}',
-        },
-        body: json.encode({
-          'content': content,
-          'rating': rating,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
-
-        if (jsonData['success'] == true && jsonData['data'] != null) {
-          return VenueComment.fromJson(jsonData['data']);
-        }
-      }
-
-      return null;
-    } catch (e) {
-      print('Error updating comment: $e');
-      return null;
-    }
-  }
-
-  /// Delete a comment
-  static Future<bool> deleteComment(String commentId) async {
-    try {
-      final uri = Uri.parse('${ApiConstants.baseUrl}/comments/$commentId');
-
-      final response = await http.delete(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${await _getAuthToken()}',
-        },
-      );
-
-      return response.statusCode == 200;
-    } catch (e) {
-      print('Error deleting comment: $e');
-      return false;
-    }
-  }
-
-  /// Like a comment
-  static Future<bool> likeComment(String commentId) async {
-    try {
-      final uri = Uri.parse('${ApiConstants.baseUrl}/comments/$commentId/like');
 
       final response = await http.post(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${await _getAuthToken()}',
-        },
+        Uri.parse('$baseUrl/posts/$venueId/like'),
+        headers: await _getHeaders(),
       );
 
-      return response.statusCode == 200;
+      print('📥 Response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+
+        if (jsonData['success'] == true) {
+          return {
+            'success': true,
+            'message': jsonData['message'] ?? 'Like toggled successfully',
+            'isFavorite': true,
+          };
+        }
+      } else if (response.statusCode == 401) {
+        return {
+          'success': false,
+          'message': 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại',
+        };
+      }
+
+      return {
+        'success': false,
+        'message': 'Failed to toggle favorite',
+      };
     } catch (e) {
-      print('Error liking comment: $e');
-      return false;
+      print('Error toggling favorite: $e');
+      return {
+        'success': false,
+        'message': 'Lỗi: $e',
+      };
     }
   }
 
-  // ============================================================================
-  // VENDOR OPERATIONS (FOR VENDOR ROLE)
-  // ============================================================================
+  /// ✅ Get liked/favorited venues
+  /// Accessible by: USER, VENDOR, ADMIN (authenticated users)
+  /// 🔒 REQUIRES: Authentication
+  static Future<Map<String, dynamic>?> getLikedVenues({
+    int page = 0,
+    int size = 20,
+  }) async {
+    try {
+      print('❤️ Fetching liked venues...');
 
-  /// Create a new venue/post (Vendor only)
-  static Future<VenueDetailResponse?> createVenue({
+      // ✅ Check permission using RoleHelper
+      final hasAuth = await RoleHelper.hasAnyRole([
+        RoleHelper.ROLE_USER,
+        RoleHelper.ROLE_VENDOR,
+        RoleHelper.ROLE_ADMIN,
+      ]);
+
+      if (!hasAuth) {
+        print('❌ User not authenticated');
+        return null;
+      }
+
+      final url = '$baseUrl/posts/liked?page=$page&size=$size';
+      final response = await http.get(
+        Uri.parse(url),
+        headers: await _getHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+
+        if (jsonData['success'] == true && jsonData['data'] != null) {
+          final data = jsonData['data'];
+
+          return {
+            'venues': data['content'] ?? [],
+            'totalElements': data['totalElements'] ?? 0,
+            'totalPages': data['totalPages'] ?? 0,
+            'currentPage': data['number'] ?? page,
+          };
+        }
+      }
+
+      return null;
+    } catch (e) {
+      print('Error fetching liked venues: $e');
+      return null;
+    }
+  }
+
+  // =====================================================
+  // 📝 CREATE POST (VENDOR/ADMIN ONLY)
+  // =====================================================
+
+  /// ✅ Create new venue/post
+  /// Accessible by: VENDOR, ADMIN only
+  /// 🔒 REQUIRES: VENDOR or ADMIN role
+  static Future<Map<String, dynamic>?> createVenue({
     required String title,
     required String description,
     required String content,
@@ -693,101 +484,362 @@ class VenueService {
     required List<String> imagePaths,
     required List<String> amenities,
     required String style,
-    bool allowComments = true,
-    bool enableNotifications = true,
-    List<Map<String, dynamic>>? menuItems, // ✅ THÊM parameter này
+    required bool allowComments,
+    required bool enableNotifications,
+    List<Map<String, dynamic>>? menuItems,
   }) async {
     try {
-      var request = http.MultipartRequest(
-        'POST',
-        Uri.parse('${ApiConstants.baseUrl}/posts'),
-      );
+      print('═══════════════════════════════════════');
+      print('🌐 CREATE VENUE - START');
+      print('═══════════════════════════════════════');
 
-      // Add headers
-      request.headers.addAll({
-        'Authorization': 'Bearer ${await _getAuthToken()}',
-      });
+      // ✅ CHECK PERMISSION
+      /*
+    final canCreate = await RoleHelper.canCreatePost();
+    if (!canCreate) {
+      print('❌ PERMISSION DENIED');
+      return {
+        'error': 'PERMISSION_DENIED',
+        'message': 'Bạn không có quyền tạo bài đăng.',
+      };
+    }
+    */
 
-      // Add fields
+      // ✅ Get token
+      final token = await StorageService.getToken();
+      if (token == null || token.isEmpty) {
+        print('❌ NO TOKEN');
+        return {
+          'error': 'NO_TOKEN',
+          'message': 'Vui lòng đăng nhập lại.',
+        };
+      }
+
+      // ✅ Build URL
+      final uri = Uri.parse('$baseUrl/posts');
+      print('📍 URL: $uri');
+
+      // ✅ Create multipart request
+      final request = http.MultipartRequest('POST', uri);
+      request.headers['Authorization'] = 'Bearer $token';
+
+      // ✅ Add fields
       request.fields['title'] = title;
       request.fields['description'] = description;
       request.fields['content'] = content;
       request.fields['location'] = location;
       request.fields['price'] = price.toString();
       request.fields['capacity'] = capacity.toString();
+      request.fields['style'] = style;
       request.fields['allowComments'] = allowComments.toString();
       request.fields['enableNotifications'] = enableNotifications.toString();
-      request.fields['style'] = style;
 
-      // Add amenities as JSON array
-      request.fields['amenities'] = jsonEncode(amenities);
+      // ✅ Add amenities as JSON string
+      request.fields['amenities'] = json.encode(amenities);
+      print('📦 Amenities: ${amenities.length} items');
 
-      // ✅ THÊM: Add menu items as JSON array
+      // ✅ Add menuItems as JSON string (OPTIONAL)
       if (menuItems != null && menuItems.isNotEmpty) {
-        request.fields['menuItems'] = jsonEncode(menuItems);
+        request.fields['menuItems'] = json.encode(menuItems);
+        print('🍽️ Menu items: ${menuItems.length} sets');
+      } else {
+        print('⚠️ No menu items (optional)');
       }
 
-      // Add images
-      for (var imagePath in imagePaths) {
-        final file = File(imagePath);
-        if (await file.exists()) {
-          var multipartFile = await http.MultipartFile.fromPath(
+      // ✅ Attach images
+      print('📷 Attaching ${imagePaths.length} images...');
+      for (int i = 0; i < imagePaths.length; i++) {
+        try {
+          final file = File(imagePaths[i]);
+
+          // ✅ Check file exists
+          if (!await file.exists()) {
+            print('  [$i] ❌ File not found: ${imagePaths[i]}');
+            continue;
+          }
+
+          final multipartFile = await http.MultipartFile.fromPath(
             'images',
-            file.path,
-            contentType: MediaType('image', 'jpeg'),
+            imagePaths[i],
           );
+
           request.files.add(multipartFile);
+          print(
+              '  [$i] ✅ ${multipartFile.length} bytes - ${multipartFile.filename}');
+        } catch (e) {
+          print('  [$i] ❌ Error: $e');
         }
       }
 
-      final streamedResponse = await request.send();
+      // ✅ Check if any images attached
+      if (request.files.isEmpty) {
+        print('❌ NO IMAGES ATTACHED');
+        return {
+          'error': 'NO_IMAGES',
+          'message': 'Không có ảnh nào được đính kèm.',
+        };
+      }
+
+      // ✅ Send request
+      print('═══════════════════════════════════════');
+      print('🚀 SENDING REQUEST...');
+      print('Fields: ${request.fields.keys.toList()}');
+      print('Files: ${request.files.length}');
+      print('═══════════════════════════════════════');
+
+      final streamedResponse = await request.send().timeout(
+        const Duration(seconds: 60), // ✅ Tăng timeout lên 60s
+        onTimeout: () {
+          throw TimeoutException('Request timeout after 60 seconds');
+        },
+      );
+
       final response = await http.Response.fromStream(streamedResponse);
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
+      print('📥 Response Status: ${response.statusCode}');
+      print('📥 Response Body: ${response.body}');
+      print('═══════════════════════════════════════');
 
-        if (jsonData['success'] == true && jsonData['data'] != null) {
-          return VenueDetailResponse.fromJson(jsonData['data']);
+      // ✅ Handle success response
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        try {
+          final jsonData = json.decode(response.body);
+
+          print('✅ Response decoded successfully');
+          print('Success: ${jsonData['success']}');
+
+          if (jsonData['success'] == true && jsonData['data'] != null) {
+            final postData = jsonData['data'] as Map<String, dynamic>;
+            print('✅ Post ID: ${postData['id']}');
+            print('✅ Post created successfully');
+            return postData;
+          } else {
+            print('❌ Success = false or no data');
+            return {
+              'error': 'INVALID_RESPONSE',
+              'message': jsonData['message'] ?? 'Unknown error',
+            };
+          }
+        } catch (e) {
+          print('❌ Error parsing response: $e');
+          return {
+            'error': 'PARSE_ERROR',
+            'message': 'Lỗi parse response: $e',
+            'body': response.body,
+          };
         }
       }
 
-      print('Failed to create venue: ${response.statusCode}');
-      print('Response: ${response.body}');
-      return null;
-    } catch (e) {
-      print('Error creating venue: $e');
-      return null;
+      // ✅ Handle error responses
+      else if (response.statusCode == 400) {
+        final errorData = json.decode(response.body);
+        return {
+          'error': 'BAD_REQUEST',
+          'message': errorData['message'] ?? 'Dữ liệu không hợp lệ',
+        };
+      } else if (response.statusCode == 401) {
+        return {
+          'error': 'UNAUTHORIZED',
+          'message': 'Phiên đăng nhập hết hạn.',
+        };
+      } else if (response.statusCode == 403) {
+        return {
+          'error': 'FORBIDDEN',
+          'message': 'Bạn không có quyền thực hiện.',
+        };
+      } else if (response.statusCode == 500) {
+        return {
+          'error': 'SERVER_ERROR',
+          'message': 'Lỗi server. Vui lòng thử lại sau.',
+        };
+      }
+
+      print('❌ Unexpected status: ${response.statusCode}');
+      return {
+        'error': 'UNKNOWN_ERROR',
+        'message': 'Lỗi không xác định (${response.statusCode})',
+      };
+    } on TimeoutException catch (e) {
+      print('❌ TIMEOUT: $e');
+      return {
+        'error': 'TIMEOUT',
+        'message': 'Kết nối quá lâu. Vui lòng thử lại.',
+      };
+    } on SocketException catch (e) {
+      print('❌ NETWORK ERROR: $e');
+      return {
+        'error': 'NETWORK_ERROR',
+        'message': 'Lỗi kết nối mạng.',
+      };
+    } catch (e, stackTrace) {
+      print('❌ UNEXPECTED ERROR: $e');
+      print('Stack trace: $stackTrace');
+      return {
+        'error': 'UNEXPECTED_ERROR',
+        'message': 'Lỗi không mong muốn: $e',
+      };
     }
   }
 
-  /// Update venue (Vendor only)
-  static Future<VenueDetailResponse?> updateVenue(
-    String venueId, {
+  // ✅ Helper: Get HTTP status text
+  static String _getStatusText(int statusCode) {
+    switch (statusCode) {
+      case 200:
+        return 'OK';
+      case 201:
+        return 'Created';
+      case 400:
+        return 'Bad Request';
+      case 401:
+        return 'Unauthorized';
+      case 403:
+        return 'Forbidden';
+      case 404:
+        return 'Not Found';
+      case 500:
+        return 'Internal Server Error';
+      default:
+        return 'Unknown';
+    }
+  }
+
+  // =====================================================
+  // 📝 UPDATE/DELETE POST (VENDOR/ADMIN ONLY)
+  // =====================================================
+
+  /// ✅ Update existing venue/post
+  /// Accessible by: VENDOR (own posts), ADMIN (all posts)
+  /// 🔒 REQUIRES: Ownership check or ADMIN role
+  static Future<Map<String, dynamic>?> updateVenue({
+    required String venueId,
+    required String postOwnerId,
     String? title,
     String? description,
     String? content,
     String? location,
     double? price,
     int? capacity,
-    List<String>? newImagePaths,
-    List<String>? existingImageUrls,
     List<String>? amenities,
     String? style,
-    bool? allowComments,
-    bool? enableNotifications,
+    List<String>? imagePaths, // New images to upload
+    List<String>? existingImageUrls, // Existing images to keep
   }) async {
     try {
-      var request = http.MultipartRequest(
-        'PUT',
-        Uri.parse('${ApiConstants.baseUrl}/posts/$venueId'),
+      print('✏️ Updating venue: $venueId');
+
+      // ✅ CHECK PERMISSION using RoleHelper
+      final canEdit = await RoleHelper.canEditPost(postOwnerId);
+      if (!canEdit) {
+        print('❌ PERMISSION DENIED: Cannot edit this post');
+        return {
+          'error': 'PERMISSION_DENIED',
+          'message': 'Bạn không có quyền chỉnh sửa bài đăng này.',
+        };
+      }
+
+      final role = await RoleHelper.getCurrentRole();
+      print('✅ Permission granted - Role: $role');
+
+      final token = await StorageService.getToken();
+      if (token == null) {
+        return {
+          'error': 'NO_TOKEN',
+          'message': 'Vui lòng đăng nhập để thực hiện chức năng này.',
+        };
+      }
+
+      // If images are being updated, use multipart request
+      if (imagePaths != null && imagePaths.isNotEmpty) {
+        return await _updateVenueWithImages(
+          venueId: venueId,
+          token: token,
+          title: title,
+          description: description,
+          content: content,
+          location: location,
+          price: price,
+          capacity: capacity,
+          amenities: amenities,
+          style: style,
+          imagePaths: imagePaths,
+          existingImageUrls: existingImageUrls,
+        );
+      }
+
+      // Otherwise, use JSON request (original behavior)
+      final requestBody = <String, dynamic>{};
+
+      if (title != null) requestBody['title'] = title;
+      if (description != null) requestBody['description'] = description;
+      if (content != null) requestBody['content'] = content;
+      if (location != null) requestBody['location'] = location;
+      if (price != null) requestBody['price'] = price;
+      if (capacity != null) requestBody['capacity'] = capacity;
+      if (amenities != null) requestBody['amenities'] = amenities;
+      if (style != null) requestBody['style'] = style;
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/posts/$venueId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(requestBody),
       );
 
-      // Add headers
-      request.headers.addAll({
-        'Authorization': 'Bearer ${await _getAuthToken()}',
-      });
+      print('📥 Response status: ${response.statusCode}');
 
-      // Add fields (only if provided)
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+
+        if (jsonData['success'] == true && jsonData['data'] != null) {
+          print('✅ Venue updated successfully!');
+          return jsonData['data'];
+        }
+      } else if (response.statusCode == 403) {
+        return {
+          'error': 'FORBIDDEN',
+          'message': 'Bạn không có quyền chỉnh sửa bài đăng này.',
+        };
+      }
+
+      return null;
+    } catch (e) {
+      print('❌ Error updating venue: $e');
+      return {
+        'error': 'UNEXPECTED_ERROR',
+        'message': 'Đã có lỗi xảy ra: $e',
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>?> _updateVenueWithImages({
+    required String venueId,
+    required String token,
+    String? title,
+    String? description,
+    String? content,
+    String? location,
+    double? price,
+    int? capacity,
+    List<String>? amenities,
+    String? style,
+    required List<String> imagePaths,
+    List<String>? existingImageUrls,
+  }) async {
+    try {
+      print('📤 Updating venue with images using multipart/form-data');
+
+      var request = http.MultipartRequest(
+        'PUT',
+        Uri.parse('$baseUrl/posts/$venueId'),
+      );
+
+      request.headers['Authorization'] = 'Bearer $token';
+      request.headers['Accept'] = 'application/json';
+
+      // Add text fields
       if (title != null) request.fields['title'] = title;
       if (description != null) request.fields['description'] = description;
       if (content != null) request.fields['content'] = content;
@@ -795,76 +847,157 @@ class VenueService {
       if (price != null) request.fields['price'] = price.toString();
       if (capacity != null) request.fields['capacity'] = capacity.toString();
       if (style != null) request.fields['style'] = style;
-      if (allowComments != null) {
-        request.fields['allowComments'] = allowComments.toString();
-      }
-      if (enableNotifications != null) {
-        request.fields['enableNotifications'] = enableNotifications.toString();
-      }
 
       if (amenities != null) {
-        request.fields['amenities'] = json.encode(amenities);
+        request.fields['amenities'] = jsonEncode(amenities);
       }
 
-      if (existingImageUrls != null) {
-        request.fields['existingImages'] = json.encode(existingImageUrls);
+      // Add existing image URLs to keep
+      if (existingImageUrls != null && existingImageUrls.isNotEmpty) {
+        request.fields['existingImages'] = jsonEncode(existingImageUrls);
       }
 
-      // Add new images
-      if (newImagePaths != null) {
-        for (var imagePath in newImagePaths) {
-          final file = File(imagePath);
-          if (await file.exists()) {
-            var multipartFile = await http.MultipartFile.fromPath(
-              'newImages',
-              file.path,
-              contentType: MediaType('image', 'jpeg'),
-            );
-            request.files.add(multipartFile);
-          }
-        }
+      // Add new image files
+      for (var i = 0; i < imagePaths.length; i++) {
+        final file = File(imagePaths[i]);
+        final mimeType = _getMimeType(imagePaths[i]);
+
+        request.files.add(await http.MultipartFile.fromPath(
+          'images', // Backend expects 'images' field
+          file.path,
+          contentType: MediaType.parse(mimeType),
+        ));
+
+        print('📎 Added image ${i + 1}: ${file.path}');
       }
 
+      print('📤 Sending multipart request...');
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
+      print('📥 Response status: ${response.statusCode}');
+      print('📥 Response body: ${response.body}');
+
       if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
+        final jsonData = jsonDecode(response.body);
 
         if (jsonData['success'] == true && jsonData['data'] != null) {
-          return VenueDetailResponse.fromJson(jsonData['data']);
+          print('✅ Venue with images updated successfully!');
+          return jsonData['data'];
         }
+      } else if (response.statusCode == 403) {
+        return {
+          'error': 'FORBIDDEN',
+          'message': 'Bạn không có quyền chỉnh sửa bài đăng này.',
+        };
       }
 
-      print('Failed to update venue: ${response.statusCode}');
-      return null;
+      return {
+        'error': 'UPDATE_FAILED',
+        'message': 'Không thể cập nhật bài viết. Vui lòng thử lại.',
+      };
     } catch (e) {
-      print('Error updating venue: $e');
-      return null;
+      print('❌ Error updating venue with images: $e');
+      return {
+        'error': 'UNEXPECTED_ERROR',
+        'message': 'Đã có lỗi xảy ra: $e',
+      };
     }
   }
 
-  /// Delete venue (Vendor only)
-  static Future<bool> deleteVenue(String venueId) async {
+  static String _getMimeType(String path) {
+    final extension = path.split('.').last.toLowerCase();
+    switch (extension) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'gif':
+        return 'image/gif';
+      case 'webp':
+        return 'image/webp';
+      default:
+        return 'image/jpeg';
+    }
+  }
+
+  /// ✅ Delete venue/post
+  /// Accessible by: VENDOR (own posts), ADMIN (all posts)
+  /// 🔒 REQUIRES: Ownership check or ADMIN role
+  static Future<Map<String, dynamic>> deleteVenue(
+    String venueId,
+    String postOwnerId, // ✅ ADDED for permission check
+  ) async {
     try {
-      final uri = Uri.parse('${ApiConstants.baseUrl}/posts/$venueId');
+      print('🗑️ Deleting venue: $venueId');
+
+      // ✅ CHECK PERMISSION using RoleHelper
+      final canDelete = await RoleHelper.canDeletePost(postOwnerId);
+      if (!canDelete) {
+        print('❌ PERMISSION DENIED: Cannot delete this post');
+        return {
+          'success': false,
+          'error': 'PERMISSION_DENIED',
+          'message': 'Bạn không có quyền xóa bài đăng này.',
+        };
+      }
+
+      final role = await RoleHelper.getCurrentRole();
+      print('✅ Permission granted - Role: $role');
+
+      final token = await StorageService.getToken();
+      if (token == null) {
+        return {
+          'success': false,
+          'error': 'NO_TOKEN',
+          'message': 'Vui lòng đăng nhập để thực hiện chức năng này.',
+        };
+      }
 
       final response = await http.delete(
-        uri,
+        Uri.parse('$baseUrl/posts/$venueId'),
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${await _getAuthToken()}',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
         },
       );
 
-      return response.statusCode == 200;
+      print('📥 Response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        print('✅ Venue deleted successfully!');
+        return {
+          'success': true,
+          'message': jsonData['message'] ?? 'Xóa bài đăng thành công',
+        };
+      } else if (response.statusCode == 403) {
+        return {
+          'success': false,
+          'error': 'FORBIDDEN',
+          'message': 'Bạn không có quyền xóa bài đăng này.',
+        };
+      }
+
+      return {
+        'success': false,
+        'error': 'DELETE_FAILED',
+        'message': 'Không thể xóa bài đăng',
+      };
     } catch (e) {
-      print('Error deleting venue: $e');
-      return false;
+      print('❌ Error deleting venue: $e');
+      return {
+        'success': false,
+        'error': 'UNEXPECTED_ERROR',
+        'message': 'Đã có lỗi xảy ra: $e',
+      };
     }
   }
 
-  /// Get my venues (Vendor only)
+  /// ✅ Get my venues/posts (for VENDOR/ADMIN)
+  /// Accessible by: VENDOR, ADMIN only
+  /// 🔒 REQUIRES: VENDOR or ADMIN role
   static Future<Map<String, dynamic>?> getMyVenues({
     int page = 0,
     int size = 10,
@@ -872,32 +1005,56 @@ class VenueService {
     String sortDir = 'desc',
   }) async {
     try {
-      final uri = Uri.parse(
-        '${ApiConstants.baseUrl}/posts/my-posts?page=$page&size=$size&sortBy=$sortBy&sortDir=$sortDir',
-      );
+      print('📋 Fetching my venues...');
+
+      // ✅ CHECK PERMISSION using RoleHelper
+      final canManage = await RoleHelper.hasAnyRole([
+        RoleHelper.ROLE_VENDOR,
+        RoleHelper.ROLE_ADMIN,
+      ]);
+
+      if (!canManage) {
+        print('❌ PERMISSION DENIED: User cannot access this resource');
+        return null;
+      }
+
+      final role = await RoleHelper.getCurrentRole();
+      print('✅ Permission granted - Role: $role');
+
+      final token = await StorageService.getToken();
+      if (token == null) {
+        print('❌ No token found');
+        return null;
+      }
+
+      final url =
+          '$baseUrl/posts/my-posts?page=$page&size=$size&sortBy=$sortBy&sortDir=$sortDir';
+      print('📍 URL: $url');
 
       final response = await http.get(
-        uri,
+        Uri.parse(url),
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${await _getAuthToken()}',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
         },
       );
 
+      print('📥 Response status: ${response.statusCode}');
+
       if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
+        final jsonData = jsonDecode(response.body);
 
         if (jsonData['success'] == true && jsonData['data'] != null) {
           final data = jsonData['data'];
-          final List<dynamic> content = data['content'] ?? [];
 
           return {
-            'venues': content
-                .map((item) => VenueDetailResponse.fromJson(item))
-                .toList(),
-            'totalPages': data['totalPages'] ?? 0,
+            'venues': data['content'] ?? [],
             'totalElements': data['totalElements'] ?? 0,
-            'currentPage': data['number'] ?? 0,
+            'totalPages': data['totalPages'] ?? 0,
+            'currentPage': data['number'] ?? page,
+            'size': data['size'] ?? size,
+            'hasNext': !(data['last'] ?? true),
+            'hasPrevious': data['first'] == false,
           };
         }
       }
@@ -909,51 +1066,41 @@ class VenueService {
     }
   }
 
-  /// Get venue statistics (Vendor only)
-  static Future<Map<String, dynamic>?> getVenueStatistics(
-      String venueId) async {
-    try {
-      final uri =
-          Uri.parse('${ApiConstants.baseUrl}/posts/$venueId/statistics');
+  // =====================================================
+  // 📊 STATISTICS (VENDOR/ADMIN)
+  // =====================================================
 
-      final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${await _getAuthToken()}',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
-
-        if (jsonData['success'] == true && jsonData['data'] != null) {
-          return jsonData['data'];
-        }
-      }
-
-      return null;
-    } catch (e) {
-      print('Error fetching venue statistics: $e');
-      return null;
-    }
-  }
-
-  /// Get vendor statistics (Vendor only)
+  /// ✅ Get vendor statistics
+  /// Accessible by: VENDOR (own stats), ADMIN (all stats)
+  /// 🔒 REQUIRES: VENDOR or ADMIN role
   static Future<Map<String, dynamic>?> getVendorStatistics() async {
     try {
-      final uri = Uri.parse('${ApiConstants.baseUrl}/posts/statistics/vendor');
+      print('📊 Fetching vendor statistics...');
+
+      // ✅ CHECK PERMISSION
+      final canView = await RoleHelper.hasAnyRole([
+        RoleHelper.ROLE_VENDOR,
+        RoleHelper.ROLE_ADMIN,
+      ]);
+
+      if (!canView) {
+        print('❌ PERMISSION DENIED');
+        return null;
+      }
+
+      final token = await StorageService.getToken();
+      if (token == null) return null;
 
       final response = await http.get(
-        uri,
+        Uri.parse('$baseUrl/posts/my-posts/statistics'),
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${await _getAuthToken()}',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
         },
       );
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
+        final jsonData = jsonDecode(response.body);
 
         if (jsonData['success'] == true && jsonData['data'] != null) {
           return jsonData['data'];
@@ -962,136 +1109,8 @@ class VenueService {
 
       return null;
     } catch (e) {
-      print('Error fetching vendor statistics: $e');
+      print('Error fetching statistics: $e');
       return null;
-    }
-  }
-
-  // ============================================================================
-  // HELPER METHODS
-  // ============================================================================
-
-  /// Get authentication token from secure storage
-  static Future<String> _getAuthToken() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getString('auth_token') ?? '';
-    } catch (e) {
-      print('Error getting auth token: $e');
-      return '';
-    }
-  }
-
-  /// Save authentication token to secure storage
-  static Future<void> saveAuthToken(String token) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('auth_token', token);
-    } catch (e) {
-      print('Error saving auth token: $e');
-    }
-  }
-
-  /// Clear authentication token
-  static Future<void> clearAuthToken() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('auth_token');
-    } catch (e) {
-      print('Error clearing auth token: $e');
-    }
-  }
-
-  /// Check if user is authenticated
-  static Future<bool> isAuthenticated() async {
-    final token = await _getAuthToken();
-    return token.isNotEmpty;
-  }
-}
-
-// ============================================================================
-// ✅ SỬA: ĐỔI TÊN CLASS COMMENT THÀNH VENUECOMMENT
-// ============================================================================
-
-class VenueComment {
-  final String id;
-  final String content;
-  final double rating;
-  final String userId;
-  final String userName;
-  final String? userAvatar;
-  final List<String> images;
-  final int likeCount;
-  final bool isLiked;
-  final DateTime createdAt;
-  final DateTime? updatedAt;
-
-  VenueComment({
-    required this.id,
-    required this.content,
-    required this.rating,
-    required this.userId,
-    required this.userName,
-    this.userAvatar,
-    required this.images,
-    required this.likeCount,
-    required this.isLiked,
-    required this.createdAt,
-    this.updatedAt,
-  });
-
-  factory VenueComment.fromJson(Map<String, dynamic> json) {
-    return VenueComment(
-      id: json['id']?.toString() ?? '',
-      content: json['content'] ?? '',
-      rating: (json['rating'] ?? 0).toDouble(),
-      userId: json['userId']?.toString() ?? '',
-      userName: json['userName'] ?? '',
-      userAvatar: json['userAvatar'],
-      images: json['images'] != null ? List<String>.from(json['images']) : [],
-      likeCount: json['likeCount'] ?? 0,
-      isLiked: json['isLiked'] ?? false,
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'])
-          : DateTime.now(),
-      updatedAt:
-          json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'content': content,
-      'rating': rating,
-      'userId': userId,
-      'userName': userName,
-      'userAvatar': userAvatar,
-      'images': images,
-      'likeCount': likeCount,
-      'isLiked': isLiked,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt?.toIso8601String(),
-    };
-  }
-
-  // ✅ Helper method để format date
-  String get formattedDate {
-    final now = DateTime.now();
-    final difference = now.difference(createdAt);
-
-    if (difference.inDays > 365) {
-      return '${(difference.inDays / 365).floor()} năm trước';
-    } else if (difference.inDays > 30) {
-      return '${(difference.inDays / 30).floor()} tháng trước';
-    } else if (difference.inDays > 0) {
-      return '${difference.inDays} ngày trước';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours} giờ trước';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes} phút trước';
-    } else {
-      return 'Vừa xong';
     }
   }
 }

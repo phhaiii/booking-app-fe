@@ -28,13 +28,6 @@ class LoginScreen extends StatelessWidget {
 
               // Form
               const WLoginForm(),
-
-              // Divider
-              WFormDivider(dividerText: WTexts.orSignInWith.capitalize!),
-              const SizedBox(height: WSizes.spaceBtwItems),
-
-              // Footer - Social Buttons
-              const WSocialButton()
             ],
           ),
         ),

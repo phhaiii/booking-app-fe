@@ -1,9 +1,12 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
-import 'package:booking_app/models/venuedetail_response.dart';
-import 'package:booking_app/models/comment.dart'; // ✅ SỬA: Import từ models
+import 'package:booking_app/response/venuedetail_response.dart';
+import 'package:booking_app/model/commentmodel.dart';
 import 'package:booking_app/service/venue_service.dart';
 import 'package:booking_app/service/api_constants.dart';
+import 'package:booking_app/service/menu_service.dart';
+import 'package:booking_app/service/comment_service.dart';
+import 'package:booking_app/model/menu_model.dart';
 
 class DetailVenueController extends GetxController {
   // Observables
@@ -13,7 +16,7 @@ class DetailVenueController extends GetxController {
   var errorMessage = ''.obs;
 
   var venue = Rxn<VenueDetailResponse>();
-  var comments = <Comment>[].obs; // ✅ SỬA: Sử dụng Comment từ models
+  var comments = <Comment>[].obs;
   var isFavorite = false.obs;
   var selectedImageIndex = 0.obs;
 
@@ -23,8 +26,16 @@ class DetailVenueController extends GetxController {
   var hasMoreComments = true.obs;
   var isLoadingMoreComments = false.obs;
 
+  // ✅ THÊM: Rating statistics từ backend
+  var backendAverageRating = Rxn<double>();
+  var backendTotalComments = Rxn<int>();
+
   // Current venue ID
   String? _currentVenueId;
+
+  // Menus
+  var menus = <MenuModel>[].obs;
+  var isLoadingMenus = false.obs;
 
   @override
   void onInit() {
@@ -54,10 +65,10 @@ class DetailVenueController extends GetxController {
       errorMessage.value = '';
       _currentVenueId = venueId;
 
-      print('🔄 Loading venue details for ID: $venueId');
+      print('Loading venue details for ID: $venueId');
 
       // Load venue details
-      final venueData = await VenueService.getVenueDetails(venueId);
+      final venueData = await VenueService.getVenueDetail(venueId);
 
       if (venueData != null) {
         venue.value = venueData;
@@ -65,12 +76,29 @@ class DetailVenueController extends GetxController {
         // Update favorite status from venue data
         isFavorite.value = venueData.isFavorite;
 
-        print('✅ Venue loaded: ${venueData.title}');
+        print('Venue loaded: ${venueData.title}');
         print(
-            '📊 Rating: ${venueData.rating}, Reviews: ${venueData.reviewCount}');
+            '📊 Venue data - Rating: ${venueData.rating}, ReviewCount: ${venueData.reviewCount}, CommentCount: ${venueData.commentCount}');
+        print('📊 Controller averageRating: $averageRating');
+        print('📊 Controller totalReviewCount: $totalReviewCount');
 
-        // Load initial comments
-        await loadComments(venueId, isRefresh: true);
+        // Load statistics first để có rating ngay
+        try {
+          await loadCommentStatistics(venueId);
+        } catch (e) {
+          print('⚠️ Failed to load statistics: $e');
+        }
+
+        // Load initial comments - bỏ qua nếu lỗi, vẫn hiển thị venue
+        try {
+          await loadComments(venueId, isRefresh: true);
+        } catch (e) {
+          print('⚠️ Failed to load comments, but venue is still available: $e');
+          // Không throw error, vẫn cho phép xem venue
+        }
+
+        // Load menus
+        await loadMenus(venueId);
       } else {
         hasError.value = true;
         errorMessage.value = 'Không tìm thấy thông tin venue';
@@ -105,11 +133,73 @@ class DetailVenueController extends GetxController {
     }
   }
 
-  // Load comments với proper pagination
+  Future<void> loadMenus(String venueId) async {
+    try {
+      isLoadingMenus.value = true;
+      print('Loading menus for venue: $venueId');
+
+      final loadedMenus = await MenuService.getMenusByPost(int.parse(venueId));
+      menus.value = loadedMenus;
+
+      print('Loaded ${loadedMenus.length} menus');
+    } catch (e) {
+      print('❌ Error loading menus: $e');
+      menus.value = [];
+    } finally {
+      isLoadingMenus.value = false;
+    }
+  }
+
+  // ✅ Load comment statistics separately
+  Future<void> loadCommentStatistics(String venueId) async {
+    try {
+      print('🔄 Loading comment statistics for venue: $venueId');
+
+      final stats = await CommentService.getCommentStatistics(postId: venueId);
+
+      print('📦 Statistics response: $stats');
+      print('📦 Statistics keys: ${stats.keys.toList()}');
+
+      // Parse statistics from response - handle multiple formats
+      Map<String, dynamic>? data;
+
+      if (stats['data'] != null) {
+        data = stats['data'] as Map<String, dynamic>;
+        print('📦 Using data wrapper');
+      } else {
+        data = stats;
+        print('📦 Using direct response');
+      }
+
+      print('📦 Data keys: ${data.keys.toList()}');
+      print('📦 averageRating value: ${data['averageRating']}');
+      print('📦 totalComments value: ${data['totalComments']}');
+
+      if (data['averageRating'] != null) {
+        backendAverageRating.value = (data['averageRating'] as num).toDouble();
+        print('✅ Loaded averageRating: ${backendAverageRating.value}');
+      } else {
+        print('⚠️ No averageRating in response');
+      }
+
+      if (data['totalComments'] != null) {
+        backendTotalComments.value = data['totalComments'] as int;
+        print('✅ Loaded totalComments: ${backendTotalComments.value}');
+      } else {
+        print('⚠️ No totalComments in response');
+      }
+    } catch (e, stackTrace) {
+      print('❌ Error loading comment statistics: $e');
+      print('Stack trace: $stackTrace');
+      // Don't throw - statistics is optional
+    }
+  }
+
+  // Load comments with proper pagination
   Future<void> loadComments(String venueId, {bool isRefresh = false}) async {
     try {
       if (isRefresh) {
-        currentPage.value = 0;
+        currentPage.value = 0; // Start from page 0 for Spring Boot pagination
         hasMoreComments.value = true;
         isLoadingComments.value = true;
         comments.clear();
@@ -122,88 +212,59 @@ class DetailVenueController extends GetxController {
       print(
           '🔄 Loading comments for venue: $venueId, page: ${currentPage.value}');
 
-      // Call API với proper response structure
-      final response = await VenueService.getVenueComments(
-        venueId,
+      // Call CommentService to load comments (backend uses 0-based pagination)
+      final response = await CommentService.getComments(
+        postId: venueId,
         page: currentPage.value,
         size: 10,
       );
 
-      if (response != null && response['comments'] != null) {
-        // ✅ SỬA: Convert VenueComment từ API sang Comment model
-        final List<VenueComment> venueComments =
-            (response['comments'] as List).cast<VenueComment>();
+      print('📦 Comments response received');
 
-        final List<Comment> uiComments =
-            venueComments.map((vc) => _convertToUIComment(vc)).toList();
+      final loadedComments = response.comments;
 
-        final int total = response['totalPages'] ?? 0;
-        final double avgRating = (response['averageRating'] ?? 0.0).toDouble();
-
-        if (isRefresh || currentPage.value == 0) {
-          comments.assignAll(uiComments);
-        } else {
-          comments.addAll(uiComments);
-        }
-
-        totalPages.value = total;
-
-        print('✅ Loaded ${uiComments.length} comments');
-        print('📊 Average rating: $avgRating');
-
-        // Check if there are more comments
-        if (currentPage.value + 1 >= total) {
-          hasMoreComments.value = false;
-        } else {
-          currentPage.value++;
-        }
-
-        // Update venue rating if available
-        if (venue.value != null && avgRating > 0) {
-          venue.value = venue.value!.copyWith(
-            rating: avgRating,
-            reviewCount: response['totalElements'] ?? comments.length,
-          );
-        }
+      if (isRefresh || currentPage.value == 0) {
+        comments.assignAll(loadedComments);
       } else {
-        if (currentPage.value == 0) {
-          comments.clear();
-        }
-        hasMoreComments.value = false;
-
-        print('ℹ️ No comments found');
+        comments.addAll(loadedComments);
       }
-    } catch (e) {
-      print('❌ Error loading comments: $e');
 
-      Get.snackbar(
-        'Lỗi',
-        'Không thể tải bình luận',
-        backgroundColor: Colors.red.withOpacity(0.1),
-        colorText: Colors.red,
-        snackPosition: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 2),
-      );
+      totalPages.value = response.totalPages;
+      hasMoreComments.value = response.hasMore;
+
+      // ✅ LƯU: Rating statistics từ backend
+      if (response.averageRating != null) {
+        backendAverageRating.value = response.averageRating;
+        print('📊 Backend Average Rating: ${response.averageRating}');
+      } else {
+        print('⚠️ No averageRating in response');
+      }
+
+      if (response.totalComments != null) {
+        backendTotalComments.value = response.totalComments;
+        print('📊 Backend Total Comments: ${response.totalComments}');
+      } else {
+        print('⚠️ No totalComments in response');
+      }
+
+      if (response.hasMore) {
+        currentPage.value++;
+      }
+
+      print('✅ Loaded ${loadedComments.length} comments');
+      print(
+          '   Current page: ${currentPage.value}, Total: ${response.totalCount}');
+      print('   Has more: ${response.hasMore}');
+    } catch (e, stackTrace) {
+      print('❌ Error loading comments: $e');
+      print('Stack trace: $stackTrace');
+      if (isRefresh) {
+        comments.clear();
+      }
     } finally {
       isLoadingComments.value = false;
       isLoadingMoreComments.value = false;
     }
-  }
-
-  // ✅ SỬA: Helper method to convert VenueComment to Comment model
-  Comment _convertToUIComment(VenueComment venueComment) {
-    return Comment(
-      id: venueComment.id,
-      userId: venueComment.userId,
-      userName: venueComment.userName,
-      userAvatar: venueComment.userAvatar ?? '',
-      rating: venueComment.rating,
-      content: venueComment.content,
-      images: venueComment.images,
-      likes: venueComment.likeCount,
-      createdAt: venueComment.createdAt,
-      updatedAt: venueComment.updatedAt ?? venueComment.createdAt,
-    );
   }
 
   // Load more comments (pagination)
@@ -211,11 +272,11 @@ class DetailVenueController extends GetxController {
     if (!hasMoreComments.value ||
         isLoadingMoreComments.value ||
         _currentVenueId == null) {
-      print('⚠️ Cannot load more comments');
+      print('Cannot load more comments');
       return;
     }
 
-    print('🔄 Loading more comments...');
+    print('Loading more comments...');
     await loadComments(_currentVenueId!);
   }
 
@@ -225,7 +286,7 @@ class DetailVenueController extends GetxController {
       Get.snackbar(
         'Lỗi',
         'Không tìm thấy thông tin venue',
-        backgroundColor: Colors.red.withOpacity(0.1),
+        backgroundColor: Colors.transparent,
         colorText: Colors.red,
         snackPosition: SnackPosition.TOP,
         icon: const Icon(Icons.error_outline, color: Colors.red),
@@ -238,7 +299,7 @@ class DetailVenueController extends GetxController {
       final previousState = isFavorite.value;
       isFavorite.value = !isFavorite.value;
 
-      print('🔄 Toggling favorite for venue: $_currentVenueId');
+      print('Toggling favorite for venue: $_currentVenueId');
 
       // Call API với proper response
       final result = await VenueService.toggleFavorite(_currentVenueId!);
@@ -247,7 +308,7 @@ class DetailVenueController extends GetxController {
         final bool newFavoriteState = result['isFavorite'] ?? !previousState;
         isFavorite.value = newFavoriteState;
 
-        print('✅ Favorite toggled: $newFavoriteState');
+        print('Favorite toggled: $newFavoriteState');
 
         Get.snackbar(
           newFavoriteState
@@ -257,7 +318,7 @@ class DetailVenueController extends GetxController {
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: newFavoriteState
               ? Colors.red.withOpacity(0.1)
-              : Colors.grey.withOpacity(0.1),
+              : Colors.transparent,
           colorText: newFavoriteState ? Colors.red : Colors.grey.shade700,
           duration: const Duration(seconds: 2),
           icon: Icon(
@@ -274,7 +335,7 @@ class DetailVenueController extends GetxController {
         Get.snackbar(
           'Lỗi',
           result['message'] ?? 'Không thể cập nhật trạng thái yêu thích',
-          backgroundColor: Colors.red.withOpacity(0.1),
+          backgroundColor: Colors.transparent,
           colorText: Colors.red,
           snackPosition: SnackPosition.TOP,
           icon: const Icon(Icons.error_outline, color: Colors.red),
@@ -315,7 +376,6 @@ class DetailVenueController extends GetxController {
       return;
     }
 
-    // Validate input
     if (content.trim().isEmpty) {
       Get.snackbar(
         'Lỗi',
@@ -369,85 +429,40 @@ class DetailVenueController extends GetxController {
         barrierDismissible: false,
       );
 
-      print('🔄 Adding comment for venue: $_currentVenueId');
-      print('⭐ Rating: $rating, Content length: ${content.length}');
+      print('Adding comment for venue: $_currentVenueId');
 
-      final newVenueComment = await VenueService.addComment(
-        _currentVenueId!,
+      // Validate content
+      print('Rating: $rating, Content length: ${content.length}');
+
+      // Create comment
+      await CommentService.createComment(
+        postId: _currentVenueId!,
         content: content,
         rating: rating,
-        imagePaths: imagePaths,
       );
 
-      Get.back(); // Close loading dialog
+      Get.back(); // Close loading
 
-      if (newVenueComment != null) {
-        // Convert to Comment model and add to list
-        final newComment = _convertToUIComment(newVenueComment);
-        comments.insert(0, newComment);
+      // ✅ Reload venue data để cập nhật rating và reviewCount từ backend
+      await loadVenueDetails(_currentVenueId!);
 
-        print('✅ Comment added successfully');
-
-        // Update venue rating and review count
-        if (venue.value != null) {
-          final currentReviewCount = venue.value!.reviewCount;
-          final currentRating = venue.value!.rating;
-          final newReviewCount = currentReviewCount + 1;
-
-          // Calculate new average rating
-          final newAverageRating =
-              ((currentRating * currentReviewCount) + rating) / newReviewCount;
-
-          venue.value = venue.value!.copyWith(
-            rating: newAverageRating,
-            reviewCount: newReviewCount,
-          );
-
-          print(
-              '📊 Updated rating: $newAverageRating ($newReviewCount reviews)');
-        }
-
-        Get.snackbar(
-          '✅ Thành công',
-          'Đánh giá của bạn đã được gửi',
-          backgroundColor: Colors.green.withOpacity(0.1),
-          colorText: Colors.green,
-          snackPosition: SnackPosition.TOP,
-          icon: const Icon(Icons.check_circle, color: Colors.green),
-          duration: const Duration(seconds: 3),
-        );
-
-        // Refresh comments to sync with server
-        Future.delayed(const Duration(seconds: 1), () {
-          if (_currentVenueId != null) {
-            loadComments(_currentVenueId!, isRefresh: true);
-          }
-        });
-      } else {
-        print('❌ Failed to add comment');
-
-        Get.snackbar(
-          'Lỗi',
-          'Không thể gửi đánh giá. Vui lòng thử lại.',
-          backgroundColor: Colors.red.withOpacity(0.1),
-          colorText: Colors.red,
-          snackPosition: SnackPosition.TOP,
-          icon: const Icon(Icons.error_outline, color: Colors.red),
-        );
-      }
+      Get.snackbar(
+        '✅ Thành công',
+        'Đánh giá của bạn đã được gửi',
+        backgroundColor: Colors.green.withOpacity(0.1),
+        colorText: Colors.green,
+        snackPosition: SnackPosition.TOP,
+      );
     } catch (e) {
-      Get.back(); // Close loading dialog
-
+      Get.back(); // Close loading
       print('❌ Error adding comment: $e');
 
       Get.snackbar(
-        'Lỗi kết nối',
-        'Không thể gửi đánh giá. Vui lòng kiểm tra kết nối mạng.',
+        'Lỗi',
+        'Không thể gửi đánh giá',
         backgroundColor: Colors.red.withOpacity(0.1),
         colorText: Colors.red,
         snackPosition: SnackPosition.TOP,
-        duration: const Duration(seconds: 3),
-        icon: const Icon(Icons.error_outline, color: Colors.red),
       );
     }
   }
@@ -455,8 +470,99 @@ class DetailVenueController extends GetxController {
   // Refresh all data (pull to refresh)
   Future<void> refreshData() async {
     if (_currentVenueId != null) {
-      print('🔄 Refreshing venue data...');
+      print('Refreshing venue data...');
       await loadVenueDetails(_currentVenueId!);
+    }
+  }
+
+  // ✅ Delete venue (VENDOR/ADMIN only)
+  Future<void> deleteVenue() async {
+    if (_currentVenueId == null || venue.value == null) {
+      Get.snackbar(
+        'Lỗi',
+        'Không tìm thấy thông tin venue',
+        backgroundColor: Colors.red.withOpacity(0.1),
+        colorText: Colors.red,
+        snackPosition: SnackPosition.TOP,
+      );
+      return;
+    }
+
+    try {
+      // Show loading
+      Get.dialog(
+        PopScope(
+          canPop: false,
+          child: const Center(
+            child: Card(
+              margin: EdgeInsets.all(20),
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text(
+                      'Đang xóa bài viết...',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        barrierDismissible: false,
+      );
+
+      print('Deleting venue: $_currentVenueId');
+
+      final vendorId = venue.value!.vendor.id.toString();
+      final result = await VenueService.deleteVenue(
+        _currentVenueId!,
+        vendorId,
+      );
+
+      Get.back(); // Close loading
+
+      if (result['success'] == true) {
+        Get.snackbar(
+          '✅ Thành công',
+          result['message'] ?? 'Đã xóa bài viết thành công',
+          backgroundColor: Colors.green.withOpacity(0.1),
+          colorText: Colors.green,
+          snackPosition: SnackPosition.TOP,
+          duration: const Duration(seconds: 2),
+        );
+
+        // Navigate back after successful deletion
+        await Future.delayed(const Duration(milliseconds: 500));
+        Get.back(); // Go back to previous screen
+      } else {
+        Get.snackbar(
+          'Lỗi',
+          result['message'] ?? 'Không thể xóa bài viết',
+          backgroundColor: Colors.red.withOpacity(0.1),
+          colorText: Colors.red,
+          snackPosition: SnackPosition.TOP,
+          duration: const Duration(seconds: 3),
+        );
+      }
+    } catch (e) {
+      Get.back(); // Close loading
+      print('❌ Error deleting venue: $e');
+
+      Get.snackbar(
+        'Lỗi',
+        'Đã xảy ra lỗi khi xóa bài viết',
+        backgroundColor: Colors.red.withOpacity(0.1),
+        colorText: Colors.red,
+        snackPosition: SnackPosition.TOP,
+      );
     }
   }
 
@@ -466,37 +572,57 @@ class DetailVenueController extends GetxController {
         index >= 0 &&
         index < venue.value!.images.length) {
       selectedImageIndex.value = index;
-      print('🖼️ Image index updated: $index');
+      print('Image index updated: $index');
     }
   }
 
-  // Get full image URL with proper base URL
+  // ✅ FIX: Remove /api from image URLs
   String getImageUrl(String imagePath) {
     if (imagePath.isEmpty) {
+      print('Empty image path');
       return '';
     }
 
+    print('Original path: $imagePath');
+
     // Already full URL
     if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      print('Full URL: $imagePath');
       return imagePath;
     }
 
-    // Remove leading slash if present
-    final cleanPath =
-        imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
+    // ✅ FIX: Don't add /api for uploads
+    String fullUrl;
+    if (imagePath.startsWith('/uploads/')) {
+      fullUrl =
+          '${ApiConstants.baseUrl}$imagePath'; // http://10.0.2.2:8089/uploads/...
+    } else if (imagePath.startsWith('/')) {
+      fullUrl = '${ApiConstants.baseUrl}$imagePath';
+    } else {
+      fullUrl = '${ApiConstants.baseUrl}/uploads/$imagePath';
+    }
 
-    return '${ApiConstants.imageBaseUrl}/$cleanPath';
+    print('Full URL: $fullUrl');
+    return fullUrl;
   }
 
-  // Get venue images with proper URLs
   List<String> get venueImages {
-    if (venue.value?.images != null && venue.value!.images.isNotEmpty) {
-      return venue.value!.images
-          .map((image) => getImageUrl(image))
-          .where((url) => url.isNotEmpty)
-          .toList();
+    if (venue.value?.images == null || venue.value!.images.isEmpty) {
+      print('No images in venue');
+      return [];
     }
-    return [];
+
+    print('═══════════════════════════════════════');
+    print('PROCESSING VENUE IMAGES');
+    print('Raw images: ${venue.value!.images}');
+
+    final fullUrls =
+        venue.value!.images.map((img) => getImageUrl(img)).toList();
+
+    print('Full URLs: $fullUrls');
+    print('═══════════════════════════════════════');
+
+    return fullUrls;
   }
 
   // Get current selected image URL
@@ -540,7 +666,7 @@ class DetailVenueController extends GetxController {
     if (venue.value?.rating != null) {
       final rating = venue.value!.rating.toStringAsFixed(1);
       final count = venue.value!.reviewCount;
-      return '⭐ $rating ($count đánh giá)';
+      return '$rating ($count đánh giá)';
     }
     return 'Chưa có đánh giá';
   }
@@ -548,16 +674,60 @@ class DetailVenueController extends GetxController {
   // Get comments count
   int get commentsCount => comments.length;
 
-  // Get average rating from comments
+  // ✅ Get average rating - ưu tiên backend statistics > tính từ comments > venue data
   double get averageRating {
-    if (comments.isEmpty) return 0.0;
+    // 1. Ưu tiên: Rating từ comments statistics (backend tính toàn bộ)
+    if (backendAverageRating.value != null && backendAverageRating.value! > 0) {
+      print('📊 Using backend averageRating: ${backendAverageRating.value}');
+      return backendAverageRating.value!;
+    }
 
-    final sum = comments.fold<double>(
-      0.0,
-      (prev, comment) => prev + comment.rating,
-    );
+    // 2. Tính từ comments đã load (nếu có)
+    if (comments.isNotEmpty) {
+      final sum =
+          comments.fold<double>(0.0, (prev, comment) => prev + comment.rating);
+      final calculated = sum / comments.length;
+      print(
+          '📊 Calculated rating from ${comments.length} comments: $calculated');
+      return calculated;
+    }
 
-    return sum / comments.length;
+    // 3. Fallback cuối: Rating từ venue data (có thể null từ backend)
+    final venueRating = venue.value?.rating ?? 0.0;
+    if (venueRating > 0) {
+      print('📊 Using venue rating: $venueRating');
+      return venueRating;
+    }
+
+    print('📊 No rating data available');
+    return 0.0;
+  }
+
+  // ✅ Get total review count - ưu tiên backend statistics > commentCount > comments loaded
+  int get totalReviewCount {
+    // 1. Ưu tiên: Total từ comments statistics (backend count toàn bộ)
+    if (backendTotalComments.value != null && backendTotalComments.value! > 0) {
+      print('📊 Using backend totalComments: ${backendTotalComments.value}');
+      return backendTotalComments.value!;
+    }
+
+    // 2. Fallback: CommentCount từ venue data (backend đang trả commentCount)
+    final venueCommentCount = venue.value?.commentCount ?? 0;
+    if (venueCommentCount > 0) {
+      print('📊 Using venue commentCount: $venueCommentCount');
+      return venueCommentCount;
+    }
+
+    // 3. Fallback: ReviewCount từ venue data (nếu có)
+    final venueReviewCount = venue.value?.reviewCount ?? 0;
+    if (venueReviewCount > 0) {
+      print('📊 Using venue reviewCount: $venueReviewCount');
+      return venueReviewCount;
+    }
+
+    // 4. Fallback cuối: Số comments đã load
+    print('📊 Using loaded comments count: ${comments.length}');
+    return comments.length;
   }
 
   // Check if has favorite status

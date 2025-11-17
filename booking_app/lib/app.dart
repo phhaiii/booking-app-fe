@@ -18,7 +18,7 @@ class App extends StatelessWidget {
       theme: WAppTheme.lightTheme,
       darkTheme: WAppTheme.darkTheme,
       debugShowCheckedModeBanner: false,
-      home: const OnboardingScreen(),
+      home: OnboardingScreen(),
     );
   }
 }

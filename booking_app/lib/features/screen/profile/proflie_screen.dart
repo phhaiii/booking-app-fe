@@ -1,7 +1,7 @@
 import 'package:booking_app/common/splash/section_heading.dart';
 import 'package:booking_app/features/controller/profile_controller.dart';
 import 'package:booking_app/features/screen/profile/profile_menu.dart';
-import 'package:booking_app/features/screen/profile/profile_ava.dart'; // THÊM IMPORT
+import 'package:booking_app/features/screen/profile/profile_ava.dart'; 
 import 'package:flutter/material.dart';
 import 'package:booking_app/utils/constants/sizes.dart';
 import 'package:get/get.dart';
@@ -164,16 +164,6 @@ class ProfileScreen extends StatelessWidget {
                       );
                     }
                   },
-                ),
-                WProfileMenu(
-                  title: 'Địa chỉ',
-                  value: controller.address,
-                  onPressed: () {},
-                ),
-                WProfileMenu(
-                  title: 'Ngày sinh',
-                  value: controller.formattedDateOfBirth,
-                  onPressed: () {},
                 ),
 
                 const SizedBox(height: WSizes.spaceBtwItems / 2),

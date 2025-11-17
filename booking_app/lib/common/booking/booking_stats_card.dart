@@ -13,80 +13,74 @@ class BookingStatsCards extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ FIX: Dùng GetBuilder thay vì Obx
-    return GetBuilder<BookingController>(
-      init: controller,
-      builder: (ctrl) {
-        final stats = ctrl.statistics.value;
-
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // First row
+          Row(
             children: [
               Expanded(
-                child: _StatCard(
-                  title: 'Chờ xử lý',
-                  count: (stats?.pendingBookings ??
-                          ctrl.pendingBookings.length)
-                      .toString(),
-                  icon: Iconsax.clock,
-                  color: Colors.orange,
-                ),
+                child: Obx(() => _buildStatCard(
+                      icon: Iconsax.clock,
+                      label: 'Chờ duyệt',
+                      value: controller.pendingBookings.length.toString(),
+                      color: Colors.orange,
+                    )),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _StatCard(
-                  title: 'Đã xác nhận',
-                  count: (stats?.confirmedBookings ??
-                          ctrl.confirmedBookings.length)
-                      .toString(),
-                  icon: Iconsax.tick_circle,
-                  color: Colors.green,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _StatCard(
-                  title: 'Đã từ chối',
-                  count: (stats?.rejectedBookings ??
-                          ctrl.rejectedBookings.length)
-                      .toString(),
-                  icon: Iconsax.close_circle,
-                  color: Colors.red,
-                ),
+                child: Obx(() => _buildStatCard(
+                      icon: Iconsax.tick_circle,
+                      label: 'Đã duyệt',
+                      value: controller.confirmedBookings.length.toString(),
+                      color: Colors.green,
+                    )),
               ),
             ],
           ),
-        );
-      },
+          const SizedBox(height: 12),
+          // Second row
+          Row(
+            children: [
+              Expanded(
+                child: Obx(() => _buildStatCard(
+                      icon: Iconsax.close_circle,
+                      label: 'Từ chối',
+                      value: controller.rejectedBookings.length.toString(),
+                      color: Colors.red,
+                    )),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Obx(() => _buildStatCard(
+                      icon: Iconsax.slash,
+                      label: 'Đã hủy',
+                      value: controller.cancelledBookings.length.toString(),
+                      color: Colors.grey.shade600,
+                    )),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
-}
 
-class _StatCard extends StatelessWidget {
-  final String title;
-  final String count;
-  final IconData icon;
-  final Color color;
-
-  const _StatCard({
-    required this.title,
-    required this.count,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildStatCard({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.2)),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey,
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -94,33 +88,24 @@ class _StatCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: color, size: 20),
-          ),
+          Icon(icon, color: color, size: 32),
           const SizedBox(height: 8),
           Text(
-            count,
+            value,
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 24,
               fontWeight: FontWeight.bold,
               color: color,
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 4),
           Text(
-            title,
+            label,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 12,
               color: Colors.grey.shade600,
             ),
             textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
