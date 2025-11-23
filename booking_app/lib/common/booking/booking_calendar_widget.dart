@@ -43,7 +43,7 @@ class BookingCalendarWidget extends StatelessWidget {
       
       child: GetBuilder<BookingController>(
         init: controller,
-        builder: (ctrl) => TableCalendar<BookingRequestUI>(
+        builder: (ctrl) => TableCalendar<BookingResponse>(
           firstDay: DateTime.utc(2020, 1, 1),
           lastDay: DateTime.utc(2030, 12, 31),
           focusedDay: focusedDay,

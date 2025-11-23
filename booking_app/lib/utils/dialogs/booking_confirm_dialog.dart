@@ -6,7 +6,7 @@ import 'package:booking_app/response/booking_response.dart';
 class BookingConfirmDialog {
   static void show(
     BuildContext context, {
-    required BookingRequestUI booking,
+    required BookingResponse booking,
     required VoidCallback onConfirm,
   }) {
     Get.dialog(

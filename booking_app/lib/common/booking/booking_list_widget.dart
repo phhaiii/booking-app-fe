@@ -4,14 +4,14 @@ import 'package:booking_app/response/booking_response.dart';
 import 'package:intl/intl.dart';
 
 class BookingListWidget extends StatelessWidget {
-  final List<BookingRequestUI> bookings;
+  final List<BookingResponse> bookings;
   final String emptyMessage;
   final IconData emptyIcon;
   final Color emptyColor;
   final bool showActions;
-  final Function(BookingRequestUI)? onConfirm;
-  final Function(BookingRequestUI)? onReject;
-  final Function(BookingRequestUI)? onShowDetails;
+  final Function(BookingResponse)? onConfirm;
+  final Function(BookingResponse)? onReject;
+  final Function(BookingResponse)? onShowDetails;
 
   const BookingListWidget({
     super.key,
@@ -27,6 +27,13 @@ class BookingListWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ DEBUG: Log để kiểm tra
+    print('🎯 BookingListWidget.build:');
+    print('   bookings.length: ${bookings.length}');
+    print('   showActions: $showActions');
+    print('   onConfirm: ${onConfirm != null ? "NOT NULL" : "NULL"}');
+    print('   onReject: ${onReject != null ? "NOT NULL" : "NULL"}');
+
     // ✅ FIX: Kiểm tra empty
     if (bookings.isEmpty) {
       return _buildEmptyState();
@@ -64,7 +71,7 @@ class BookingListWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildBookingCard(BookingRequestUI booking) {
+  Widget _buildBookingCard(BookingResponse booking) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
@@ -81,7 +88,7 @@ class BookingListWidget extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  _buildStatusBadge(booking.status),
+                  _buildStatusBadge(booking.statusEnum),
                   const Spacer(),
                   Text(
                     DateFormat('dd/MM/yyyy').format(booking.requestedDate),
@@ -122,7 +129,70 @@ class BookingListWidget extends StatelessWidget {
                   ),
                 ],
               ),
-              if (showActions && booking.status == BookingStatus.pending) ...[
+              // Hiển thị lý do từ chối
+              if (booking.isRejected && booking.rejectionReason != null) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: Colors.red.withOpacity(0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Iconsax.info_circle,
+                          size: 14, color: Colors.red.shade700),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Lý do: ${booking.rejectionReason}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.red.shade700,
+                            fontStyle: FontStyle.italic,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              // Hiển thị lý do hủy
+              if (booking.isCancelled &&
+                  booking.cancellationReason != null) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Iconsax.info_circle,
+                          size: 14, color: Colors.grey.shade700),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Lý do: ${booking.cancellationReason}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade700,
+                            fontStyle: FontStyle.italic,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              if (showActions && booking.isPending) ...[
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -144,8 +214,8 @@ class BookingListWidget extends StatelessWidget {
                         icon: const Icon(Iconsax.close_circle, size: 18),
                         label: const Text('Từ chối'),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red,
-                          side: const BorderSide(color: Colors.red),
+                          foregroundColor: Colors.grey.shade800,
+                          side: const BorderSide(color: Colors.grey),
                         ),
                       ),
                     ),
@@ -180,10 +250,16 @@ class BookingListWidget extends StatelessWidget {
         text = 'Từ chối';
         icon = Iconsax.close_circle;
         break;
-      default:
-        color = Colors.grey;
-        text = 'Không xác định';
-        icon = Iconsax.information;
+      case BookingStatus.cancelled:
+        color = Colors.grey.shade600;
+        text = 'Đã hủy';
+        icon = Iconsax.slash;
+        break;
+      case BookingStatus.completed:
+        color = Colors.blue;
+        text = 'Hoàn thành';
+        icon = Iconsax.tick_square;
+        break;
     }
 
     return Container(

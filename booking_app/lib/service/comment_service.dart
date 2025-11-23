@@ -134,7 +134,7 @@ class CommentService {
               'Failed to create comment: ${response.statusCode}';
           throw Exception(errorMessage);
         } catch (e) {
-          if (e.toString().contains('Exception:')) {
+          if (e.toString().startsWith('Exception:')) {
             rethrow;
           }
           throw Exception('Failed to create comment: ${response.statusCode}');
@@ -143,9 +143,9 @@ class CommentService {
     } catch (e) {
       print('❌ Error creating comment: $e');
 
-      // Clean up error message
+      // Clean up error message - remove all "Exception: " prefixes
       String errorMsg = e.toString();
-      if (errorMsg.startsWith('Exception: Exception: ')) {
+      while (errorMsg.startsWith('Exception: ')) {
         errorMsg = errorMsg.substring('Exception: '.length);
       }
       throw Exception(errorMsg);

@@ -183,8 +183,16 @@ class DashboardScreen extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
+                      Icon(
+                        Iconsax.location,
+                        size: 16,
+                        color: Colors.grey.shade600,
+                      ),
+                      const SizedBox(width: 4),
                       Text(
-                        'Tìm thấy ${controller.venues.length} địa điểm',
+                        controller.searchQuery.isEmpty
+                            ? 'Tìm thấy ${controller.venues.length} địa điểm'
+                            : 'Tìm thấy ${controller.venues.length}/${controller.allVenues.length} địa điểm',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: Colors.grey.shade600,
                             ),
@@ -243,7 +251,8 @@ class DashboardScreen extends StatelessWidget {
 
                     return DashboardCard(
                       venue: venue,
-                      onCardPressed: () =>controller.navigateToVenueDetail(venue.id),
+                      onCardPressed: () =>
+                          controller.navigateToVenueDetail(venue.id),
                     );
                   },
                 ),
@@ -286,6 +295,10 @@ class DashboardScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: WSizes.defaultSpace),
       child: TextField(
         controller: searchController,
+        onChanged: (value) {
+          // ✅ Realtime filtering
+          controller.filterVenuesLocally(value);
+        },
         onSubmitted: (value) {
           if (value.isNotEmpty) {
             controller.searchVenues(value);
@@ -365,18 +378,6 @@ class DashboardScreen extends StatelessWidget {
                     ),
               ),
               const SizedBox(height: WSizes.spaceBtwItems),
-
-              // Price filter
-              ListTile(
-                leading: const Icon(Iconsax.money),
-                title: const Text('Lọc theo giá'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () {
-                  Get.back();
-                  // TODO: Show price filter
-                },
-              ),
-
               // Capacity filter
               ListTile(
                 leading: const Icon(Iconsax.people),
@@ -391,7 +392,7 @@ class DashboardScreen extends StatelessWidget {
               // Style filter
               ListTile(
                 leading: const Icon(Iconsax.category),
-                title: const Text('Lọc theo phong cách'),
+                title: const Text('khu vực'),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                 onTap: () {
                   Get.back();

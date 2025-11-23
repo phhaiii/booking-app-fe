@@ -8,6 +8,8 @@ import 'package:flutter/foundation.dart';
 class DashboardController extends GetxController {
   // Observable variables
   final venues = <VenueModel>[].obs;
+  final allVenues =
+      <VenueModel>[].obs; // ✅ Store all venues for local filtering
   final isLoading = false.obs;
   final searchQuery = ''.obs;
   final errorMessage = ''.obs;
@@ -35,11 +37,11 @@ class DashboardController extends GetxController {
       isLoading.value = true;
       errorMessage.value = '';
 
-      print('═══════════════════════════════════════');
+      // print('═══════════════════════════════════════');
       print('LOADING VENUES');
       print('Page: ${currentPage.value}');
       print('Size: ${pageSize.value}');
-      print('═══════════════════════════════════════');
+      // print('═══════════════════════════════════════');
 
       // ✅ Call API GET /api/posts
       final response = await VenueService.getAllVenues(
@@ -105,8 +107,10 @@ class DashboardController extends GetxController {
             .toList();
 
         if (isRefresh) {
+          allVenues.value = venueList;
           venues.value = venueList;
         } else {
+          allVenues.addAll(venueList);
           venues.addAll(venueList);
         }
 
@@ -139,7 +143,7 @@ class DashboardController extends GetxController {
           print('Total pages: ${response['totalPages']}');
         }
 
-        print('═══════════════════════════════════════');
+        // print('═══════════════════════════════════════');
 
         if (venueList.isEmpty && venues.isEmpty) {
           errorMessage.value = 'Chưa có bài viết nào';
@@ -186,7 +190,6 @@ class DashboardController extends GetxController {
       icon: const Icon(Icons.refresh, color: Colors.green),
     );
   }
-
 
   // ✅ Navigate - Convert int to String
   void navigateToVenueDetail(int venueId) {
@@ -264,103 +267,32 @@ class DashboardController extends GetxController {
         .toList();
   }
 
-  // ✅ Filter by price using /api/posts/filter/price
-  Future<void> filterByPrice(double minPrice, double maxPrice) async {
-    try {
-      isLoading.value = true;
-      venues.clear();
+  // ✅ Filter venues locally by name (realtime)
+  void filterVenuesLocally(String query) {
+    searchQuery.value = query;
 
-      print('Filtering by price: $minPrice - $maxPrice');
-
-      final response = await VenueService.filterByPriceRange(
-        minPrice: minPrice,
-        maxPrice: maxPrice,
-        page: 0,
-        size: 20,
-      );
-
-      if (response != null) {
-        final List<VenueModel> venueList = (response['venues'] as List)
-            .map((json) => VenueModel.fromJson(json))
-            .toList();
-
-        venues.assignAll(venueList);
-
-        print('✅ Filter results: ${venueList.length} venues found');
-
-        Get.snackbar(
-          'Kết quả lọc',
-          'Tìm thấy ${venueList.length} venue từ ${_formatPrice(minPrice)} - ${_formatPrice(maxPrice)}',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.transparent,
-          colorText: Colors.blue.shade700,
-          icon: const Icon(Icons.filter_list, color: Colors.blue),
-        );
-      }
-    } catch (e) {
-      print('❌ Error filtering venues: $e');
-
-      Get.snackbar(
-        'Lỗi lọc',
-        'Không thể lọc địa điểm theo giá',
-        backgroundColor: Colors.transparent,
-        colorText: Colors.red,
-        snackPosition: SnackPosition.TOP,
-      );
-    } finally {
-      isLoading.value = false;
+    if (query.isEmpty) {
+      // Show all venues
+      venues.value = allVenues;
+      return;
     }
-  }
 
-  // ✅ Filter by capacity using /api/posts/filter/capacity
-  Future<void> filterByCapacity(int minCapacity) async {
-    try {
-      isLoading.value = true;
-      venues.clear();
+    // Filter by name (case insensitive)
+    final filtered = allVenues.where((venue) {
+      final venueName = venue.name.toLowerCase();
+      final searchLower = query.toLowerCase();
+      return venueName.contains(searchLower);
+    }).toList();
 
-      print('Filtering by capacity: $minCapacity+');
+    venues.value = filtered;
 
-      final response = await VenueService.filterByCapacity(
-        minCapacity: minCapacity,
-        page: 0,
-        size: 20,
-      );
-
-      if (response != null) {
-        final List<VenueModel> venueList = (response['venues'] as List)
-            .map((json) => VenueModel.fromJson(json))
-            .toList();
-
-        venues.assignAll(venueList);
-
-        print('✅ Filter results: ${venueList.length} venues found');
-
-        Get.snackbar(
-          'Kết quả lọc',
-          'Tìm thấy ${venueList.length} venue với sức chứa từ $minCapacity khách',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.transparent,
-          colorText: Colors.blue.shade700,
-        );
-      }
-    } catch (e) {
-      print('❌ Error filtering by capacity: $e');
-
-      Get.snackbar(
-        'Lỗi lọc',
-        'Không thể lọc địa điểm theo sức chứa',
-        backgroundColor: Colors.red.withOpacity(0.1),
-        colorText: Colors.red,
-        snackPosition: SnackPosition.TOP,
-      );
-    } finally {
-      isLoading.value = false;
-    }
+    print(
+        '🔍 Filtered: ${filtered.length}/${allVenues.length} venues for "$query"');
   }
 
   void clearSearch() {
     searchQuery.value = '';
-    loadVenues(isRefresh: true);
+    venues.value = allVenues; // Reset to show all
   }
 
   // Getters

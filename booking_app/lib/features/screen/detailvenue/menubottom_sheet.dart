@@ -31,16 +31,14 @@ class _MenuBottomSheetState extends State<MenuBottomSheet> {
       _isLoading.value = true;
       _errorMessage.value = '';
 
-      print('═══════════════════════════════════════');
       print('🍽️ LOADING MENUS FOR POST: ${widget.venue.id}');
-      print('═══════════════════════════════════════');
+    
 
       final menus = await MenuService.getMenusByPost(widget.venue.id);
 
       _menus.value = menus;
 
       print('✅ Loaded ${menus.length} menus');
-      print('═══════════════════════════════════════');
 
       if (menus.isEmpty) {
         _errorMessage.value = 'Chưa có menu nào';

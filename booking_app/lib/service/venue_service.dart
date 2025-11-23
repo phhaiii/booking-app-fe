@@ -209,7 +209,18 @@ class VenueService {
 
         if (jsonData['success'] == true && jsonData['data'] != null) {
           final venueData = jsonData['data'];
-          print('📄 Raw images: ${venueData['images']}');
+          print('📄 Raw images from backend: ${venueData['images']}');
+          print(
+              '📄 Images count: ${(venueData['images'] as List?)?.length ?? 0}');
+
+          // 🔍 DEBUG: Print each image URL
+          if (venueData['images'] != null) {
+            final imageList = venueData['images'] as List;
+            for (int i = 0; i < imageList.length; i++) {
+              print('   Image $i: ${imageList[i]}');
+            }
+          }
+
           print('⭐ Rating: ${venueData['rating']}');
           print('📊 ReviewCount: ${venueData['reviewCount']}');
           print('💬 CommentCount: ${venueData['commentCount']}');
@@ -274,199 +285,6 @@ class VenueService {
       return null;
     }
   }
-
-  /// ✅ Filter by price range (PUBLIC)
-  /// Accessible by: EVERYONE
-  static Future<Map<String, dynamic>?> filterByPriceRange({
-    required double minPrice,
-    required double maxPrice,
-    int page = 0,
-    int size = 20,
-  }) async {
-    try {
-      print('Filtering by price: $minPrice - $maxPrice');
-
-      final url =
-          '$baseUrl/posts/filter/price?minPrice=$minPrice&maxPrice=$maxPrice&page=$page&size=$size';
-      print('📍 URL: $url');
-
-      final response = await http.get(
-        Uri.parse(url),
-        headers: await _getHeaders(),
-      );
-
-      if (response.statusCode == 200) {
-        final jsonData = jsonDecode(response.body);
-
-        if (jsonData['success'] == true && jsonData['data'] != null) {
-          final data = jsonData['data'];
-
-          return {
-            'venues': data['content'] ?? [],
-            'totalElements': data['totalElements'] ?? 0,
-            'totalPages': data['totalPages'] ?? 0,
-          };
-        }
-      }
-
-      return null;
-    } catch (e) {
-      print('Error filtering by price: $e');
-      return null;
-    }
-  }
-
-  /// ✅ Filter by capacity (PUBLIC)
-  /// Accessible by: EVERYONE
-  static Future<Map<String, dynamic>?> filterByCapacity({
-    required int minCapacity,
-    int page = 0,
-    int size = 20,
-  }) async {
-    try {
-      print('👥 Filtering by capacity: min=$minCapacity');
-
-      final url =
-          '$baseUrl/posts/filter/capacity?minCapacity=$minCapacity&page=$page&size=$size';
-      print('📍 URL: $url');
-
-      final response = await http.get(
-        Uri.parse(url),
-        headers: await _getHeaders(),
-      );
-
-      print('📥 Response status: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        final jsonData = jsonDecode(response.body);
-
-        if (jsonData['success'] == true && jsonData['data'] != null) {
-          final data = jsonData['data'];
-
-          return {
-            'venues': data['content'] ?? [],
-            'totalElements': data['totalElements'] ?? 0,
-            'totalPages': data['totalPages'] ?? 0,
-            'currentPage': data['number'] ?? page,
-          };
-        }
-      }
-
-      print('⚠️ Failed to filter by capacity');
-      return null;
-    } catch (e) {
-      print('Error filtering by capacity: $e');
-      return null;
-    }
-  }
-
-  // =====================================================
-  // ❤️ FAVORITE/LIKE (AUTHENTICATED)
-  // =====================================================
-
-  /// ✅ Toggle favorite (like/unlike)
-  /// Accessible by: USER, VENDOR, ADMIN (authenticated users)
-  /// 🔒 REQUIRES: Authentication
-  static Future<Map<String, dynamic>> toggleFavorite(String venueId) async {
-    try {
-      print('❤️ Toggling favorite for venue: $venueId');
-
-      // ✅ Check authentication
-      final token = await StorageService.getToken();
-      if (token == null || token.isEmpty) {
-        return {
-          'success': false,
-          'message': 'Vui lòng đăng nhập để thực hiện chức năng này',
-        };
-      }
-
-      final response = await http.post(
-        Uri.parse('$baseUrl/posts/$venueId/like'),
-        headers: await _getHeaders(),
-      );
-
-      print('📥 Response status: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        final jsonData = jsonDecode(response.body);
-
-        if (jsonData['success'] == true) {
-          return {
-            'success': true,
-            'message': jsonData['message'] ?? 'Like toggled successfully',
-            'isFavorite': true,
-          };
-        }
-      } else if (response.statusCode == 401) {
-        return {
-          'success': false,
-          'message': 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại',
-        };
-      }
-
-      return {
-        'success': false,
-        'message': 'Failed to toggle favorite',
-      };
-    } catch (e) {
-      print('Error toggling favorite: $e');
-      return {
-        'success': false,
-        'message': 'Lỗi: $e',
-      };
-    }
-  }
-
-  /// ✅ Get liked/favorited venues
-  /// Accessible by: USER, VENDOR, ADMIN (authenticated users)
-  /// 🔒 REQUIRES: Authentication
-  static Future<Map<String, dynamic>?> getLikedVenues({
-    int page = 0,
-    int size = 20,
-  }) async {
-    try {
-      print('❤️ Fetching liked venues...');
-
-      // ✅ Check permission using RoleHelper
-      final hasAuth = await RoleHelper.hasAnyRole([
-        RoleHelper.ROLE_USER,
-        RoleHelper.ROLE_VENDOR,
-        RoleHelper.ROLE_ADMIN,
-      ]);
-
-      if (!hasAuth) {
-        print('❌ User not authenticated');
-        return null;
-      }
-
-      final url = '$baseUrl/posts/liked?page=$page&size=$size';
-      final response = await http.get(
-        Uri.parse(url),
-        headers: await _getHeaders(),
-      );
-
-      if (response.statusCode == 200) {
-        final jsonData = jsonDecode(response.body);
-
-        if (jsonData['success'] == true && jsonData['data'] != null) {
-          final data = jsonData['data'];
-
-          return {
-            'venues': data['content'] ?? [],
-            'totalElements': data['totalElements'] ?? 0,
-            'totalPages': data['totalPages'] ?? 0,
-            'currentPage': data['number'] ?? page,
-          };
-        }
-      }
-
-      return null;
-    } catch (e) {
-      print('Error fetching liked venues: $e');
-      return null;
-    }
-  }
-
   // =====================================================
   // 📝 CREATE POST (VENDOR/ADMIN ONLY)
   // =====================================================
@@ -854,10 +672,17 @@ class VenueService {
 
       // Add existing image URLs to keep
       if (existingImageUrls != null && existingImageUrls.isNotEmpty) {
+        print('📋 Existing images to keep (${existingImageUrls.length}):');
+        for (int i = 0; i < existingImageUrls.length; i++) {
+          print('   Existing $i: ${existingImageUrls[i]}');
+        }
         request.fields['existingImages'] = jsonEncode(existingImageUrls);
+      } else {
+        print('⚠️ No existing images to keep - all images will be replaced!');
       }
 
       // Add new image files
+      print('📋 New images to upload: ${imagePaths.length}');
       for (var i = 0; i < imagePaths.length; i++) {
         final file = File(imagePaths[i]);
         final mimeType = _getMimeType(imagePaths[i]);
@@ -868,7 +693,7 @@ class VenueService {
           contentType: MediaType.parse(mimeType),
         ));
 
-        print('📎 Added image ${i + 1}: ${file.path}');
+        print('📎 Added new image ${i + 1}: ${file.path}');
       }
 
       print('📤 Sending multipart request...');
@@ -883,6 +708,18 @@ class VenueService {
 
         if (jsonData['success'] == true && jsonData['data'] != null) {
           print('✅ Venue with images updated successfully!');
+
+          // 🔍 DEBUG: Print returned images
+          final returnedData = jsonData['data'];
+          if (returnedData['images'] != null) {
+            print(
+                '📋 Images returned from backend (${(returnedData['images'] as List).length}):');
+            final imageList = returnedData['images'] as List;
+            for (int i = 0; i < imageList.length; i++) {
+              print('   Returned image $i: ${imageList[i]}');
+            }
+          }
+
           return jsonData['data'];
         }
       } else if (response.statusCode == 403) {

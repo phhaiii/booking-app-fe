@@ -14,11 +14,12 @@ class UserBookingController extends GetxController {
   final BookingApiService _bookingService = BookingApiService();
 
   // ✅ KEEP: VenueDetailResponse cho booking details
-  final RxList<BookingRequestUI> myBookings = <BookingRequestUI>[].obs;
+  final RxList<BookingResponse> myBookings = <BookingResponse>[].obs;
   final RxList<VenueDetailResponse> venues = <VenueDetailResponse>[].obs;
   final RxList<MenuModel> menus = <MenuModel>[].obs;
   final RxBool isLoading = false.obs;
   final RxBool isLoadingMenus = false.obs;
+  final RxBool isLoadingTimeSlots = false.obs;
 
   // Booking form data
   final Rx<VenueDetailResponse?> selectedVenue = Rx<VenueDetailResponse?>(null);
@@ -26,7 +27,7 @@ class UserBookingController extends GetxController {
   final Rx<DateTime> selectedDate = DateTime.now().obs;
   final RxInt guestCount = 0.obs;
   final RxString specialRequests = ''.obs;
-  final RxInt bookingDurationHours = 2.obs; // ✅ NEW: Default 2 hours duration
+  final RxInt bookingDurationHours = 2.obs; 
   final Rx<TimeSlot?> selectedTimeSlot = Rx<TimeSlot?>(null);
   final RxList<TimeSlot> availableTimeSlots = <TimeSlot>[].obs;
 
@@ -44,19 +45,19 @@ class UserBookingController extends GetxController {
   final RxString userEmail = ''.obs;
 
   // Computed properties
-  List<BookingRequestUI> get pendingBookings =>
+  List<BookingResponse> get pendingBookings =>
       myBookings.where((b) => b.isPending).toList();
 
-  List<BookingRequestUI> get confirmedBookings =>
+  List<BookingResponse> get confirmedBookings =>
       myBookings.where((b) => b.isConfirmed).toList();
 
-  List<BookingRequestUI> get rejectedBookings =>
+  List<BookingResponse> get rejectedBookings =>
       myBookings.where((b) => b.isRejected).toList();
 
-  List<BookingRequestUI> get cancelledBookings =>
+  List<BookingResponse> get cancelledBookings =>
       myBookings.where((b) => b.isCancelled).toList();
 
-  List<BookingRequestUI> get completedBookings =>
+  List<BookingResponse> get completedBookings =>
       myBookings.where((b) => b.isCompleted).toList();
 
   @override
@@ -126,7 +127,7 @@ class UserBookingController extends GetxController {
       final response = await _bookingService.getMyBookings();
 
       myBookings.clear();
-      myBookings.addAll(response.map((e) => e.toBookingRequestUI()).toList());
+      myBookings.addAll(response);
 
       print('✅ Loaded ${myBookings.length} user bookings');
     } catch (e) {
@@ -156,12 +157,24 @@ class UserBookingController extends GetxController {
         venues.clear();
 
         // ✅ Parse JSON to VenueDetailResponse
-        final List<VenueDetailResponse> venueList = (response['venues'] as List)
-            .map((json) => VenueDetailResponse.fromJson(json))
-            .toList();
+        final List<VenueDetailResponse> venueList =
+            (response['venues'] as List).map((json) {
+          print(
+              '🔍 Parsing venue: ${json['title']}, id: ${json['id']}, id type: ${json['id'].runtimeType}');
+          return VenueDetailResponse.fromJson(json);
+        }).toList();
 
         venues.addAll(venueList);
-        print('✅ Loaded ${venues.length} venues');
+        print('═══════════════════════════════════════');
+        print('✅ LOADED ${venues.length} VENUES');
+        // Debug: print ALL venue IDs
+        if (venues.isNotEmpty) {
+          for (var i = 0; i < venues.length && i < 5; i++) {
+            print(
+                '   Venue[$i] - ID: ${venues[i].id} (${venues[i].id.runtimeType}), Title: ${venues[i].title}');
+          }
+        }
+        print('═══════════════════════════════════════');
       } else {
         print('⚠️ No venues found');
         venues.clear();
@@ -198,9 +211,13 @@ class UserBookingController extends GetxController {
   void selectVenue(VenueDetailResponse venue) {
     selectedVenue.value = venue;
     selectedMenu.value = null;
+    selectedTimeSlot.value = null; // Reset time slot when changing venue
     menus.clear();
+    availableTimeSlots.clear();
     loadMenusForVenue(venue.id);
     print('Selected venue: ${venue.title}');
+    print('Venue ID: ${venue.id}'); // Debug log
+    loadAvailableTimeSlots(); // Load available slots for selected venue
   }
 
   void selectMenu(MenuModel? menu) {
@@ -227,8 +244,12 @@ class UserBookingController extends GetxController {
     }
     selectedDate.value = date;
     print('✅ Selected date updated: $date');
-    // Load available time slots khi đổi ngày
-    loadAvailableTimeSlots();
+    // Load available time slots khi đổi ngày (chỉ khi đã chọn venue)
+    if (selectedVenue.value != null) {
+      loadAvailableTimeSlots();
+    } else {
+      print('⚠️ Venue not selected yet, skipping slot loading');
+    }
   }
 
   void selectTimeSlot(TimeSlot? slot) {
@@ -249,17 +270,73 @@ class UserBookingController extends GetxController {
 
   Future<void> loadAvailableTimeSlots() async {
     try {
-      if (selectedVenue.value == null) return;
+      if (selectedVenue.value == null) {
+        print('⚠️ No venue selected, cannot load slots');
+        return;
+      }
 
-      // Reset available slots
+      isLoadingTimeSlots.value = true;
+      final venueId = selectedVenue.value!.id;
+      print('═══════════════════════════════════════');
+      print('🔄 LOADING AVAILABLE TIME SLOTS');
+      print('Venue ID (postId): $venueId');
+      print('Venue Title: ${selectedVenue.value!.title}');
+      print('Selected Date: ${selectedDate.value}');
+      print(
+          'Date formatted: ${selectedDate.value.year}-${selectedDate.value.month.toString().padLeft(2, '0')}-${selectedDate.value.day.toString().padLeft(2, '0')}');
+      print('═══════════════════════════════════════');
+
+      // Call backend API to get slot availability
+      final slotAvailability = await _bookingService.getSlotAvailability(
+        venueId,
+        selectedDate.value,
+      );
+
+      print('📊 Slot availability response:');
+      print('   Total slots: ${slotAvailability.totalSlots}');
+      print('   Available: ${slotAvailability.availableCount}');
+      print('   Booked: ${slotAvailability.bookedCount}');
+      print('   Slots array length: ${slotAvailability.slots.length}');
+
+      // ❌ CHECK: If slots array is empty but totalSlots > 0
+      if (slotAvailability.slots.isEmpty && slotAvailability.totalSlots > 0) {
+        print('═══════════════════════════════════════');
+        print('⚠️ WARNING: Backend returned empty slots array!');
+        print('   This is a BACKEND BUG - slots array should not be empty');
+        print('   totalSlots: ${slotAvailability.totalSlots}');
+        print('   slots.length: ${slotAvailability.slots.length}');
+        print('═══════════════════════════════════════');
+      }
+
+      // Clear and rebuild available slots from API
       availableTimeSlots.clear();
-      availableTimeSlots.addAll(defaultTimeSlots);
 
-      // TODO: Gọi API để check từng slot
-      // Tạm thời hiển thị tất cả slots
-      print('✅ Loaded ${availableTimeSlots.length} time slots');
+      for (final slotInfo in slotAvailability.slots) {
+        if (slotInfo.isAvailable) {
+          final slot = TimeSlot(
+            startHour: int.parse(slotInfo.startTime.split(':')[0]),
+            endHour: int.parse(slotInfo.endTime.split(':')[0]),
+            label: slotInfo.displayText,
+            index: slotInfo.index,
+            isAvailable: true,
+          );
+          availableTimeSlots.add(slot);
+          print('   ✅ Added available slot: ${slot.label}');
+        } else {
+          print(
+              '   ❌ Skipped booked slot: ${slotInfo.displayText} (${slotInfo.bookingCode})');
+        }
+      }
+
+      print('✅ Loaded ${availableTimeSlots.length} available time slots');
     } catch (e) {
       print('❌ Error loading time slots: $e');
+      // Fallback to default slots if API fails
+      availableTimeSlots.clear();
+      availableTimeSlots.addAll(defaultTimeSlots);
+      print('⚠️ Using default slots as fallback');
+    } finally {
+      isLoadingTimeSlots.value = false;
     }
   }
 
@@ -382,19 +459,39 @@ class UserBookingController extends GetxController {
         unitPrice = venue.price / venue.capacity;
       }
 
-      // ✅ Calculate start and end times
-      final startTime = selectedDate.value;
-      final endTime =
-          selectedDate.value.add(Duration(hours: bookingDurationHours.value));
+      // ✅ Calculate start and end times by combining date with time slot hours
+      final selectedTimeSlotValue = selectedTimeSlot.value!;
+      final startTime = DateTime(
+        selectedDate.value.year,
+        selectedDate.value.month,
+        selectedDate.value.day,
+        selectedTimeSlotValue.startHour,
+        0, // minutes
+        0, // seconds
+      );
+      final endTime = DateTime(
+        selectedDate.value.year,
+        selectedDate.value.month,
+        selectedDate.value.day,
+        selectedTimeSlotValue.endHour,
+        0, // minutes
+        0, // seconds
+      );
 
       // ✅ Get slot index from selected time slot (guaranteed non-null after validation)
-      final slotIndex = selectedTimeSlot.value!.index;
-      print('📍 Using slot index: $slotIndex for time slot: ${selectedTimeSlot.value!.label}');
+      final slotIndex = selectedTimeSlotValue.index;
+      print(
+          '📍 Using slot index: $slotIndex for time slot: ${selectedTimeSlotValue.label}');
+      print('📍 Start time: ${startTime.toIso8601String()}');
+      print('📍 End time: ${endTime.toIso8601String()}');
 
       // ✅ Validate all required fields before creating booking
       print('🔍 Validation:');
       print('  - venueId: $venueId (${venueId.runtimeType})');
-      print('  - guestCount: ${guestCount.value} (${guestCount.value.runtimeType})');
+      print(
+          '  - guestCount: ${guestCount.value} (${guestCount.value.runtimeType})');
+      print(
+          '  - specialRequests: "${specialRequests.value}" (isEmpty: ${specialRequests.value.isEmpty})');
       print('  - slotIndex: $slotIndex (${slotIndex.runtimeType})');
       print('  - unitPrice: $unitPrice (${unitPrice.runtimeType})');
       print('  - postId: $venueId (${venueId.runtimeType})');
@@ -402,16 +499,16 @@ class UserBookingController extends GetxController {
       final bookingRequest = BookingRequest(
         venueId: venueId,
         bookingDate: selectedDate.value,
-        guestCount: guestCount.value,
+        numberOfGuests: guestCount.value,
         customerName: userName.value,
         customerPhone: userPhone.value,
         note: specialRequests.value.isEmpty ? null : specialRequests.value,
         menuId: selectedMenu.value?.id,
-        postId: venueId, // ✅ NEW: postId is same as venueId
-        unitPrice: unitPrice, // ✅ NEW: unit price
-        startTime: startTime, // ✅ NEW: start time
-        endTime: endTime, // ✅ NEW: end time
-        slotIndex: slotIndex, // ✅ CRITICAL: Backend requires this
+        postId: venueId, 
+        unitPrice: unitPrice,
+        startTime: startTime, 
+        endTime: endTime, 
+        slotIndex: slotIndex, 
       );
 
       print('📤 Booking request: ${bookingRequest.toJson()}');
@@ -443,18 +540,15 @@ class UserBookingController extends GetxController {
     }
   }
 
-  Future<void> cancelBooking(BookingRequestUI booking) async {
+  Future<void> cancelBooking(BookingResponse booking) async {
     try {
       isLoading.value = true;
       print('Cancelling booking ${booking.id}...');
 
-      await _bookingService.cancelBooking(int.parse(booking.id));
+      await _bookingService.cancelBooking(booking.id);
 
-      final index = myBookings.indexWhere((b) => b.id == booking.id);
-      if (index != -1) {
-        myBookings[index].status = BookingStatus.cancelled;
-        myBookings.refresh();
-      }
+      // Reload để lấy trạng thái mới từ server
+      await loadMyBookings();
 
       Get.snackbar(
         '✅ Thành công',
@@ -485,7 +579,7 @@ class UserBookingController extends GetxController {
     guestCount.value = 0;
     specialRequests.value = '';
     selectedDate.value = DateTime.now();
-    bookingDurationHours.value = 2; // ✅ Reset duration to default
+    bookingDurationHours.value = 2; 
     selectedTimeSlot.value = null;
     availableTimeSlots.clear();
     menus.clear();
@@ -493,7 +587,7 @@ class UserBookingController extends GetxController {
   }
 
   // Calendar helper methods
-  List<BookingRequestUI> getBookingsForDate(DateTime date) {
+  List<BookingResponse> getBookingsForDate(DateTime date) {
     return myBookings.where((booking) {
       final bookingDate = booking.requestedDate;
       return bookingDate.year == date.year &&

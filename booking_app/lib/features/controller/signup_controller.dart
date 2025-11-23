@@ -80,6 +80,11 @@ class SignupController extends GetxController {
     if (value == null || value.trim().isEmpty) {
       return 'Vui lòng nhập họ';
     }
+    RegExp nameRegExp = RegExp(r"^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝĐàáâãèéêìíòóôõùúýđ\s]+$");
+  
+    if (!nameRegExp.hasMatch(value.trim())) {
+    return 'Họ/Tên chỉ được chứa chữ cái và khoảng trắng';
+    }
     if (value.trim().length < 2) {
       return 'Họ phải có ít nhất 2 ký tự';
     }
@@ -90,6 +95,11 @@ class SignupController extends GetxController {
   String? validateLastName(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'Vui lòng nhập tên';
+    }
+    RegExp nameRegExp = RegExp(r"^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝĐàáâãèéêìíòóôõùúýđ\s]+$");
+  
+    if (!nameRegExp.hasMatch(value.trim())) {
+    return 'Họ/Tên chỉ được chứa chữ cái và khoảng trắng';
     }
     if (value.trim().length < 2) {
       return 'Tên phải có ít nhất 2 ký tự';

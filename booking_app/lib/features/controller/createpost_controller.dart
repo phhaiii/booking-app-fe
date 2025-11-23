@@ -373,7 +373,7 @@ class CreatePostController extends GetxController {
 
         Get.snackbar(
           '❌ Lỗi',
-          result['message'] ?? 'Không thể tạo bài viết',
+          result['message'] ?? 'Không thể tạo bài viết, vui lòng đăng nhập bằng admin hoặc vendor',
           backgroundColor: Colors.red.withOpacity(0.1),
           colorText: Colors.red,
           snackPosition: SnackPosition.TOP,
@@ -443,14 +443,14 @@ class CreatePostController extends GetxController {
 
         Get.snackbar(
           '❌ Lỗi',
-          'Response không hợp lệ từ server',
+          'Bạn không thể tạo bài viết',
           backgroundColor: Colors.red.withOpacity(0.1),
           colorText: Colors.red,
           snackPosition: SnackPosition.TOP,
         );
       }
     } catch (e, stackTrace) {
-      print('❌ EXCEPTION in publishPost: $e');
+      print('❌ Sai chức năng in publishPost: $e');
       print('Stack trace: $stackTrace');
 
       Get.snackbar(

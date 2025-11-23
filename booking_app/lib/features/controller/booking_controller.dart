@@ -12,9 +12,9 @@ class BookingController extends GetxController {
   final BookingApiService _bookingService = BookingApiService();
 
   // Observable lists
-  final RxList<BookingRequestUI> allBookings = <BookingRequestUI>[].obs;
-  final RxList<BookingRequestUI> myBookings = <BookingRequestUI>[].obs;
-  final RxList<BookingRequestUI> vendorBookings = <BookingRequestUI>[].obs;
+  final RxList<BookingResponse> allBookings = <BookingResponse>[].obs;
+  final RxList<BookingResponse> myBookings = <BookingResponse>[].obs;
+  final RxList<BookingResponse> vendorBookings = <BookingResponse>[].obs;
 
   final RxBool isLoading = false.obs;
   final Rx<BookingStatistics?> statistics = Rx<BookingStatistics?>(null);
@@ -31,20 +31,20 @@ class BookingController extends GetxController {
   ).obs;
 
   // Computed properties - matches backend status filtering
-  List<BookingRequestUI> get pendingBookings =>
-      allBookings.where((b) => b.status == BookingStatus.pending).toList();
+  List<BookingResponse> get pendingBookings =>
+      allBookings.where((b) => b.isPending).toList();
 
-  List<BookingRequestUI> get confirmedBookings =>
-      allBookings.where((b) => b.status == BookingStatus.confirmed).toList();
+  List<BookingResponse> get confirmedBookings =>
+      allBookings.where((b) => b.isConfirmed).toList();
 
-  List<BookingRequestUI> get rejectedBookings =>
-      allBookings.where((b) => b.status == BookingStatus.rejected).toList();
+  List<BookingResponse> get rejectedBookings =>
+      allBookings.where((b) => b.isRejected).toList();
 
-  List<BookingRequestUI> get cancelledBookings =>
-      allBookings.where((b) => b.status == BookingStatus.cancelled).toList();
+  List<BookingResponse> get cancelledBookings =>
+      allBookings.where((b) => b.isCancelled).toList();
 
-  List<BookingRequestUI> get completedBookings =>
-      allBookings.where((b) => b.status == BookingStatus.completed).toList();
+  List<BookingResponse> get completedBookings =>
+      allBookings.where((b) => b.isCompleted).toList();
 
   // ✅ THÊM: Get time slots cho ngày được chọn
   List<TimeSlot> getTimeSlotsForDate(DateTime date) {
@@ -55,12 +55,23 @@ class BookingController extends GetxController {
     final slots = settings.value.timeSlots;
     final bookingsOnDate = getBookingsForDate(date);
 
+    print('🔍 DEBUG getTimeSlotsForDate:');
+    print('   Date: $date');
+    print('   Total bookings on date: ${bookingsOnDate.length}');
+
     // Count bookings per slot
     for (var slot in slots) {
-      slot.bookedCount = bookingsOnDate.where((booking) {
+      final matchingBookings = bookingsOnDate.where((booking) {
         final bookingHour = booking.requestedDate.hour;
+        print('   Checking booking: ${booking.customerName}');
+        print('   - requestedDate: ${booking.requestedDate}');
+        print(
+            '   - bookingHour: $bookingHour vs slot: ${slot.startHour}-${slot.endHour}');
         return bookingHour >= slot.startHour && bookingHour < slot.endHour;
-      }).length;
+      }).toList();
+
+      slot.bookedCount = matchingBookings.length;
+      print('   Slot ${slot.timeRange}: ${slot.bookedCount} bookings');
     }
 
     return slots;
@@ -134,7 +145,7 @@ class BookingController extends GetxController {
       );
 
       myBookings.clear();
-      myBookings.addAll(response.map((e) => e.toBookingRequestUI()).toList());
+      myBookings.addAll(response);
 
       print('✅ Loaded ${myBookings.length} user bookings');
     } catch (e) {
@@ -153,7 +164,7 @@ class BookingController extends GetxController {
 
   /// GET /api/bookings/{id}
   /// Get booking by ID (numeric only)
-  Future<BookingRequestUI?> getBookingById(int id) async {
+  Future<BookingResponse?> getBookingById(int id) async {
     try {
       isLoading.value = true;
       print('GET /api/bookings/$id');
@@ -161,7 +172,7 @@ class BookingController extends GetxController {
       final response = await _bookingService.getBookingById(id);
 
       print('✅ Loaded booking $id');
-      return response.toBookingRequestUI();
+      return response;
     } catch (e) {
       print('❌ Error loading booking $id: $e');
       Get.snackbar(
@@ -221,19 +232,16 @@ class BookingController extends GetxController {
   }
 
   /// POST /api/bookings/{id}/cancel
-  /// Cancel booking (by user)
-  Future<void> cancelBooking(BookingRequestUI booking) async {
+  /// Cancel booking (by user or admin)
+  Future<void> cancelBooking(BookingResponse booking) async {
     try {
       isLoading.value = true;
       print('POST /api/bookings/${booking.id}/cancel');
 
-      await _bookingService.cancelBooking(int.parse(booking.id));
+      await _bookingService.cancelBooking(booking.id);
 
-      final index = allBookings.indexWhere((b) => b.id == booking.id);
-      if (index != -1) {
-        allBookings[index].status = BookingStatus.cancelled;
-        allBookings.refresh();
-      }
+      // Reload để lấy trạng thái mới từ server
+      await refreshBookings();
 
       Get.snackbar(
         '✅ Thành công',
@@ -283,8 +291,7 @@ class BookingController extends GetxController {
       );
 
       vendorBookings.clear();
-      vendorBookings
-          .addAll(response.map((e) => e.toBookingRequestUI()).toList());
+      vendorBookings.addAll(response);
 
       print('✅ Loaded ${vendorBookings.length} vendor bookings');
     } catch (e) {
@@ -323,7 +330,7 @@ class BookingController extends GetxController {
       );
 
       allBookings.clear();
-      allBookings.addAll(response.map((e) => e.toBookingRequestUI()).toList());
+      allBookings.addAll(response);
 
       print('✅ Loaded ${allBookings.length} venue bookings');
     } catch (e) {
@@ -365,7 +372,7 @@ class BookingController extends GetxController {
       );
 
       allBookings.clear();
-      allBookings.addAll(response.map((e) => e.toBookingRequestUI()).toList());
+      allBookings.addAll(response);
 
       print('✅ Loaded ${allBookings.length} bookings with status $status');
     } catch (e) {
@@ -384,33 +391,43 @@ class BookingController extends GetxController {
 
   /// POST /api/bookings/{id}/confirm
   /// Confirm booking (Vendor/Admin only)
-  Future<void> confirmBooking(BookingRequestUI booking) async {
+  Future<void> confirmBooking(BookingResponse booking) async {
     try {
       isLoading.value = true;
-      final date = booking.requestedDate;
-      final hour = date.hour;
+      print('🔄 Starting booking confirmation...');
+      print('   Booking ID: ${booking.id}');
+      print('   Current Status: ${booking.status}');
+      print('   Booking Date: ${booking.requestedDate}');
+      print('   Customer: ${booking.customerName}');
+      print('   Slot Index: ${booking.slotIndex}');
+      print('   Venue ID: ${booking.venueId}');
 
-      if (!isSlotAvailable(date, hour)) {
+      // ✅ CHECK: Booking must be PENDING to confirm
+      if (!booking.isPending) {
+        print('⚠️ Booking is not PENDING - current status: ${booking.status}');
         Get.snackbar(
-          '⚠️ Cảnh báo',
-          'Khung giờ này đã đầy. Vui lòng chọn thời gian khác.',
+          '⚠️ Không thể xác nhận',
+          'Chỉ có thể xác nhận đặt lịch ở trạng thái chờ duyệt. Trạng thái hiện tại: ${booking.status}',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.orange.withOpacity(0.1),
           colorText: Colors.orange,
+          duration: const Duration(seconds: 4),
         );
         return;
       }
 
+      // ✅ SKIP slot availability check when confirming
+      // The booking is already PENDING, so the slot is reserved for this booking
+      // We don't need to check if slot is available - we just confirm it
+      print(
+          '   ⏭️ Skipping slot availability check (booking already reserved)');
+      print('   ✅ Proceeding with confirmation...');
       print('POST /api/bookings/${booking.id}/confirm');
 
-      await _bookingService.confirmBooking(int.parse(booking.id));
+      await _bookingService.confirmBooking(booking.id);
 
-      final index = allBookings.indexWhere((b) => b.id == booking.id);
-      if (index != -1) {
-        allBookings[index].status = BookingStatus.confirmed;
-        allBookings[index].confirmedAt = DateTime.now();
-        allBookings.refresh();
-      }
+      // Reload để lấy trạng thái mới từ server
+      await refreshBookings();
 
       Get.snackbar(
         '✅ Thành công',
@@ -423,9 +440,28 @@ class BookingController extends GetxController {
       await refreshBookings();
     } catch (e) {
       print('❌ Error confirming booking: $e');
+      print('   Stack trace: ${StackTrace.current}');
+
+      // Parse error message from backend
+      String errorMessage = 'Không thể xác nhận đặt lịch';
+      if (e.toString().contains('Only pending bookings can be confirmed')) {
+        errorMessage =
+            'Đặt lịch này đã được xác nhận hoặc không ở trạng thái chờ duyệt';
+        // Refresh to get latest status
+        await refreshBookings();
+      } else if (e.toString().contains('Venue not found')) {
+        errorMessage = 'Không tìm thấy địa điểm';
+      } else if (e.toString().contains('Failed to confirm booking')) {
+        // Extract message from JSON response
+        final match = RegExp(r'"message":"([^"]+)"').firstMatch(e.toString());
+        if (match != null) {
+          errorMessage = match.group(1) ?? errorMessage;
+        }
+      }
+
       Get.snackbar(
-        'Lỗi',
-        'Không thể xác nhận: $e',
+        'Lỗi xác nhận',
+        errorMessage,
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.withOpacity(0.1),
         colorText: Colors.red,
@@ -437,18 +473,15 @@ class BookingController extends GetxController {
 
   /// POST /api/bookings/{id}/complete
   /// Complete booking (Vendor/Admin only)
-  Future<void> completeBooking(BookingRequestUI booking) async {
+  Future<void> completeBooking(BookingResponse booking) async {
     try {
       isLoading.value = true;
       print('POST /api/bookings/${booking.id}/complete');
 
-      await _bookingService.completeBooking(int.parse(booking.id));
+      await _bookingService.completeBooking(booking.id);
 
-      final index = allBookings.indexWhere((b) => b.id == booking.id);
-      if (index != -1) {
-        allBookings[index].status = BookingStatus.completed;
-        allBookings.refresh();
-      }
+      // Reload để lấy trạng thái mới từ server
+      await refreshBookings();
 
       Get.snackbar(
         '✅ Thành công',
@@ -475,19 +508,15 @@ class BookingController extends GetxController {
 
   /// POST /api/bookings/{id}/reject (supports POST, PUT, GET)
   /// Reject booking (Vendor/Admin only)
-  Future<void> rejectBooking(BookingRequestUI booking, String reason) async {
+  Future<void> rejectBooking(BookingResponse booking, String reason) async {
     try {
       isLoading.value = true;
       print('POST /api/bookings/${booking.id}/reject - reason: $reason');
 
-      await _bookingService.rejectBooking(int.parse(booking.id), reason);
+      await _bookingService.rejectBooking(booking.id, reason);
 
-      final index = allBookings.indexWhere((b) => b.id == booking.id);
-      if (index != -1) {
-        allBookings[index].status = BookingStatus.rejected;
-        allBookings[index].rejectedAt = DateTime.now();
-        allBookings.refresh();
-      }
+      // Reload để lấy trạng thái mới từ server
+      await refreshBookings();
 
       Get.snackbar(
         '✅ Thành công',
@@ -523,7 +552,7 @@ class BookingController extends GetxController {
 
       print('✅ Statistics updated: ${stats.totalBookings} total');
     } catch (e) {
-      print('❌ Error loading statistics: $e');
+      print(' Error loading statistics: $e');
     }
   }
 
@@ -584,7 +613,7 @@ class BookingController extends GetxController {
     } catch (e) {
       print('❌ Error refreshing: $e');
       Get.snackbar(
-        'Lỗi',
+        'Lỗi, Sai chức năng',
         'Không thể tải dữ liệu: $e',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.withOpacity(0.1),
@@ -601,11 +630,11 @@ class BookingController extends GetxController {
       print('Loaded ${response.length} bookings from API');
 
       allBookings.clear();
-      allBookings.addAll(response.map((e) => e.toBookingRequestUI()).toList());
+      allBookings.addAll(response);
 
       print('Bookings updated in controller');
     } catch (e) {
-      print('❌ Error loading bookings: $e');
+      print('❌Sai chức năng, Error loading bookings: $e');
       rethrow;
     }
   }
@@ -616,12 +645,12 @@ class BookingController extends GetxController {
       statistics.value = stats;
       print('Statistics updated: ${stats.totalBookings} total');
     } catch (e) {
-      print('❌ Error loading statistics: $e');
+      print('❌Sai chức năng, Error loading statistics: $e');
     }
   }
 
   /// Get bookings for a specific date
-  List<BookingRequestUI> getBookingsForDate(DateTime date) {
+  List<BookingResponse> getBookingsForDate(DateTime date) {
     return allBookings.where((booking) {
       final bookingDate = booking.requestedDate;
       return bookingDate.year == date.year &&

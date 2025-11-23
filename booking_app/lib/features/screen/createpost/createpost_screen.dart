@@ -8,7 +8,7 @@ import 'package:booking_app/common/createpost/details_section.dart';
 import 'package:booking_app/common/createpost/content_section.dart';
 import 'package:booking_app/common/createpost/amenities_section.dart';
 import 'package:booking_app/common/createpost/menu_section.dart';
-import 'package:booking_app/common/createpost/settings_section.dart';
+// import 'package:booking_app/common/createpost/settings_section.dart';
 import 'package:booking_app/common/createpost/bottomactions.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -47,8 +47,8 @@ class CreatePostScreen extends StatelessWidget {
 
               AmenitiesSection(controller: controller),
               const SizedBox(height: WSizes.spaceBtwSections),
-              SettingsSection(controller: controller),
-              const SizedBox(height: 100),
+              // SettingsSection(controller: controller),
+              // const SizedBox(height: 100),
             ],
           ),
         ),

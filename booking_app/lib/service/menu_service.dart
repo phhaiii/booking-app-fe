@@ -41,13 +41,17 @@ class MenuService {
       final url = '$baseUrl/posts/$postId/menus';
       print('URL: $url');
 
-      final requestBody = MenuModel.toCreateRequest(
-        name: name,
-        description: description,
-        price: price,
-        guestsPerTable: guestsPerTable,
-        items: items,
-      );
+      // Calculate pricePerPerson
+      final pricePerPerson = guestsPerTable > 0 ? price / guestsPerTable : 0.0;
+
+      final requestBody = {
+        'name': name,
+        'description': description,
+        'price': price,
+        'pricePerPerson': pricePerPerson,
+        'guestsPerTable': guestsPerTable,
+        'items': items,
+      };
 
       print('Request Body: ${json.encode(requestBody)}');
 
@@ -177,13 +181,17 @@ class MenuService {
 
       final url = '$baseUrl/menus/$menuId';
 
-      final requestBody = MenuModel.toCreateRequest(
-        name: name,
-        description: description,
-        price: price,
-        guestsPerTable: guestsPerTable,
-        items: items,
-      );
+      // Calculate pricePerPerson
+      final pricePerPerson = guestsPerTable > 0 ? price / guestsPerTable : 0.0;
+
+      final requestBody = {
+        'name': name,
+        'description': description,
+        'price': price,
+        'pricePerPerson': pricePerPerson,
+        'guestsPerTable': guestsPerTable,
+        'items': items,
+      };
 
       final response = await http.put(
         Uri.parse(url),

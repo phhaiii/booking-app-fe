@@ -73,7 +73,9 @@ class CheckListController extends GetxController {
     try {
       isLoading.value = true;
 
+      // Backend sẽ tạo ID, nhưng cần truyền một giá trị tạm
       final newItem = CheckListItem(
+        id: '', // ID sẽ được backend tạo
         title: title.trim(),
         description: description?.trim(),
       );
@@ -108,20 +110,18 @@ class CheckListController extends GetxController {
       isLoading.value = true;
 
       final item = items[index];
-      if (item.id == null) {
-        throw Exception('Item không có ID');
-      }
 
       final updatedItem = CheckListItem(
         id: item.id,
         title: title.trim(),
         description: description?.trim(),
         isCompleted: item.isCompleted,
+        userId: item.userId,
         createdAt: item.createdAt,
         completedAt: item.completedAt,
       );
 
-      final updated = await _service.update(item.id!, updatedItem);
+      final updated = await _service.update(item.id, updatedItem);
       items[index] = updated;
 
       Get.snackbar(
@@ -151,11 +151,8 @@ class CheckListController extends GetxController {
       isLoading.value = true;
 
       final item = items[index];
-      if (item.id == null) {
-        throw Exception('Item không có ID');
-      }
 
-      await _service.delete(item.id!);
+      await _service.delete(item.id);
       items.removeAt(index);
 
       Get.snackbar(
@@ -183,11 +180,8 @@ class CheckListController extends GetxController {
   Future<void> toggleItem(int index) async {
     try {
       final item = items[index];
-      if (item.id == null) {
-        throw Exception('Item không có ID');
-      }
 
-      final updated = await _service.toggleCompleted(item.id!);
+      final updated = await _service.toggleCompleted(item.id);
       items[index] = updated;
 
       Get.snackbar(

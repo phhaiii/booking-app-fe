@@ -1,7 +1,7 @@
 class BookingRequest {
   final int venueId;
   final DateTime bookingDate;
-  final int guestCount;
+  final int numberOfGuests;
   final String customerName;
   final String customerPhone;
   final String? note;
@@ -12,12 +12,12 @@ class BookingRequest {
   final double unitPrice;
   final DateTime startTime;
   final DateTime endTime;
-  final int slotIndex; // ✅ CRITICAL: Slot index is required by backend
+  final int slotIndex;
 
   BookingRequest({
     required this.venueId,
     required this.bookingDate,
-    required this.guestCount,
+    required this.numberOfGuests,
     required this.customerName,
     required this.customerPhone,
     this.note,
@@ -34,7 +34,7 @@ class BookingRequest {
     return {
       'venueId': venueId,
       'bookingDate': bookingDate.toIso8601String(),
-      'guestCount': guestCount,
+      'number_of_guests': numberOfGuests,
       'customerName': customerName,
       'customerPhone': customerPhone,
       if (note != null && note!.isNotEmpty) 'note': note,
@@ -51,7 +51,7 @@ class BookingRequest {
     return BookingRequest(
       venueId: json['venue_id'] ?? json['venueId'] ?? 0,
       bookingDate: DateTime.parse(json['booking_date'] ?? json['bookingDate']),
-      guestCount: json['number_of_guests'] ?? json['guestCount'] ?? 1,
+      numberOfGuests: json['numberOfGuests'] ?? json['number_of_guests'] ?? 1,
       customerName: json['customer_name'] ?? json['customerName'] ?? '',
       customerPhone: json['customer_phone'] ?? json['customerPhone'] ?? '',
       note: json['special_requests'] ?? json['note'],

@@ -6,7 +6,7 @@ import 'package:booking_app/response/booking_response.dart';
 class BookingRejectDialog {
   static void show(
     BuildContext context, {
-    required BookingRequestUI booking,
+    required BookingResponse booking,
     required Function(String) onReject,
   }) {
     final TextEditingController reasonController = TextEditingController();

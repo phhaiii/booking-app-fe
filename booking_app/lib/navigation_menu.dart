@@ -1,10 +1,8 @@
-import 'package:booking_app/features/screen/chat/chat_ui.dart';
 import 'package:booking_app/features/screen/list/list.dart';
 import 'package:booking_app/features/screen/dashboard/dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
-import 'package:booking_app/features/screen/notification/notification_screen.dart';
 
 
 class NavigationMenu extends StatelessWidget {
@@ -23,8 +21,6 @@ class NavigationMenu extends StatelessWidget {
           onDestinationSelected: (index) =>controller.selectedIndex.value = index,
           destinations: [
             NavigationDestination(icon: Icon(Iconsax.home), label: 'Trang chủ'),
-            NavigationDestination(icon: Icon(Iconsax.activity), label: 'Trò chuyện'),
-            NavigationDestination(icon: Icon(Iconsax.notification), label: 'Thông báo'),
             NavigationDestination(icon: Icon(Iconsax.category), label: 'Danh sách'),
           ],
         ),
@@ -37,10 +33,8 @@ class NavigationMenu extends StatelessWidget {
 class NavigationController extends GetxController {
   final Rx<int> selectedIndex = 0.obs;
 
-  final screens = [
+  final List<Widget> screens = [
     const DashboardScreen(),
-    const ChatUIScreen(),
-    const NotificationScreen(),
     const ListScreen(),
   ];
 }

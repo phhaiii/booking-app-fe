@@ -10,8 +10,9 @@ class BookingHelper {
       case BookingStatus.confirmed:
         return Colors.green;
       case BookingStatus.rejected:
-      case BookingStatus.cancelled:
         return Colors.red;
+      case BookingStatus.cancelled:
+        return Colors.grey;
       case BookingStatus.completed:
         return Colors.blue;
     }
@@ -24,8 +25,9 @@ class BookingHelper {
       case BookingStatus.confirmed:
         return 'Đã xác nhận';
       case BookingStatus.rejected:
-      case BookingStatus.cancelled:
         return 'Đã từ chối';
+      case BookingStatus.cancelled:
+        return 'Đã hủy';
       case BookingStatus.completed:
         return 'Hoàn thành';
     }
@@ -38,8 +40,9 @@ class BookingHelper {
       case BookingStatus.confirmed:
         return Iconsax.tick_circle;
       case BookingStatus.rejected:
-      case BookingStatus.cancelled:
         return Iconsax.close_circle;
+      case BookingStatus.cancelled:
+        return Iconsax.close_square;
       case BookingStatus.completed:
         return Iconsax.tick_circle;
     }

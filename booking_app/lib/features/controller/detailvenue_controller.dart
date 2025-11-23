@@ -65,7 +65,13 @@ class DetailVenueController extends GetxController {
       errorMessage.value = '';
       _currentVenueId = venueId;
 
-      print('Loading venue details for ID: $venueId');
+      print('═══════════════════════════════════════');
+      print('🔄 Loading venue details for ID: $venueId');
+      print('═══════════════════════════════════════');
+
+      // 🔄 Clear existing venue data to force fresh load
+      venue.value = null;
+      selectedImageIndex.value = 0;
 
       // Load venue details
       final venueData = await VenueService.getVenueDetail(venueId);
@@ -73,10 +79,12 @@ class DetailVenueController extends GetxController {
       if (venueData != null) {
         venue.value = venueData;
 
-        // Update favorite status from venue data
-        isFavorite.value = venueData.isFavorite;
-
-        print('Venue loaded: ${venueData.title}');
+        // 🔍 DEBUG: Print loaded images
+        print('📋 Loaded images (${venueData.images.length}):');
+        for (int i = 0; i < venueData.images.length; i++) {
+          print('   Image $i: ${venueData.images[i]}');
+        }
+        print('✅ Venue loaded: ${venueData.title}');
         print(
             '📊 Venue data - Rating: ${venueData.rating}, ReviewCount: ${venueData.reviewCount}, CommentCount: ${venueData.commentCount}');
         print('📊 Controller averageRating: $averageRating');
@@ -279,86 +287,6 @@ class DetailVenueController extends GetxController {
     print('Loading more comments...');
     await loadComments(_currentVenueId!);
   }
-
-  // Toggle favorite với proper API call
-  Future<void> toggleFavorite() async {
-    if (_currentVenueId == null) {
-      Get.snackbar(
-        'Lỗi',
-        'Không tìm thấy thông tin venue',
-        backgroundColor: Colors.transparent,
-        colorText: Colors.red,
-        snackPosition: SnackPosition.TOP,
-        icon: const Icon(Icons.error_outline, color: Colors.red),
-      );
-      return;
-    }
-
-    try {
-      // Optimistic update
-      final previousState = isFavorite.value;
-      isFavorite.value = !isFavorite.value;
-
-      print('Toggling favorite for venue: $_currentVenueId');
-
-      // Call API với proper response
-      final result = await VenueService.toggleFavorite(_currentVenueId!);
-
-      if (result['success'] == true) {
-        final bool newFavoriteState = result['isFavorite'] ?? !previousState;
-        isFavorite.value = newFavoriteState;
-
-        print('Favorite toggled: $newFavoriteState');
-
-        Get.snackbar(
-          newFavoriteState
-              ? '❤️ Đã thêm vào yêu thích'
-              : '💔 Đã xóa khỏi yêu thích',
-          venue.value?.title ?? '',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: newFavoriteState
-              ? Colors.red.withOpacity(0.1)
-              : Colors.transparent,
-          colorText: newFavoriteState ? Colors.red : Colors.grey.shade700,
-          duration: const Duration(seconds: 2),
-          icon: Icon(
-            newFavoriteState ? Icons.favorite : Icons.favorite_border,
-            color: newFavoriteState ? Colors.red : Colors.grey,
-          ),
-        );
-      } else {
-        // Revert on failure
-        isFavorite.value = previousState;
-
-        print('❌ Failed to toggle favorite');
-
-        Get.snackbar(
-          'Lỗi',
-          result['message'] ?? 'Không thể cập nhật trạng thái yêu thích',
-          backgroundColor: Colors.transparent,
-          colorText: Colors.red,
-          snackPosition: SnackPosition.TOP,
-          icon: const Icon(Icons.error_outline, color: Colors.red),
-        );
-      }
-    } catch (e) {
-      // Revert on error
-      isFavorite.value = !isFavorite.value;
-
-      print('❌ Error toggling favorite: $e');
-
-      Get.snackbar(
-        'Lỗi kết nối',
-        'Không thể kết nối đến server',
-        backgroundColor: Colors.red.withOpacity(0.1),
-        colorText: Colors.red,
-        snackPosition: SnackPosition.TOP,
-        duration: const Duration(seconds: 3),
-        icon: const Icon(Icons.error_outline, color: Colors.red),
-      );
-    }
-  }
-
   // Add comment với proper API call
   Future<void> addComment({
     required String content,
@@ -457,12 +385,26 @@ class DetailVenueController extends GetxController {
       Get.back(); // Close loading
       print('❌ Error adding comment: $e');
 
+      // Extract user-friendly error message
+      String errorMessage = 'Không thể gửi đánh giá';
+      String errorString = e.toString();
+
+      // Check for specific error cases
+      if (errorString.contains('You have already commented on this post')) {
+        errorMessage = 'Bạn đã đánh giá địa điểm này rồi';
+      } else if (errorString.contains('Exception: ')) {
+        // Extract message after "Exception: "
+        errorMessage = errorString.substring(
+            errorString.lastIndexOf('Exception: ') + 'Exception: '.length);
+      }
+
       Get.snackbar(
         'Lỗi',
-        'Không thể gửi đánh giá',
+        errorMessage,
         backgroundColor: Colors.red.withOpacity(0.1),
         colorText: Colors.red,
         snackPosition: SnackPosition.TOP,
+        duration: const Duration(seconds: 4),
       );
     }
   }
@@ -579,7 +521,7 @@ class DetailVenueController extends GetxController {
   // ✅ FIX: Remove /api from image URLs
   String getImageUrl(String imagePath) {
     if (imagePath.isEmpty) {
-      print('Empty image path');
+      print('⚠️ Empty image path');
       return '';
     }
 
@@ -591,14 +533,19 @@ class DetailVenueController extends GetxController {
       return imagePath;
     }
 
-    // ✅ FIX: Don't add /api for uploads
+    
     String fullUrl;
     if (imagePath.startsWith('/uploads/')) {
-      fullUrl =
-          '${ApiConstants.baseUrl}$imagePath'; // http://10.0.2.2:8089/uploads/...
+      // Path already has /uploads/
+      fullUrl = '${ApiConstants.baseUrl}$imagePath';
+    } else if (imagePath.startsWith('uploads/')) {
+      // Path missing leading slash
+      fullUrl = '${ApiConstants.baseUrl}/$imagePath';
     } else if (imagePath.startsWith('/')) {
+      // Other absolute path
       fullUrl = '${ApiConstants.baseUrl}$imagePath';
     } else {
+      // Relative path - assume it's just the filename
       fullUrl = '${ApiConstants.baseUrl}/uploads/$imagePath';
     }
 

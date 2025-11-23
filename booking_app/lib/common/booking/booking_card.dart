@@ -7,11 +7,11 @@ import 'booking_card_time.dart';
 import 'package:booking_app/common/booking/booking_card_action.dart';
 
 class BookingCard extends StatelessWidget {
-  final BookingRequestUI booking;
+  final BookingResponse booking;
   final bool showActions;
-  final Function(BookingRequestUI)? onConfirm;
-  final Function(BookingRequestUI)? onReject;
-  final Function(BookingRequestUI) onShowDetails;
+  final Function(BookingResponse)? onConfirm;
+  final Function(BookingResponse)? onReject;
+  final Function(BookingResponse) onShowDetails;
 
   const BookingCard({
     super.key,

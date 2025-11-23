@@ -3,10 +3,10 @@ import 'package:booking_app/response/booking_response.dart';
 import 'package:booking_app/utils/constants/colors.dart';
 
 class BookingCardActions extends StatelessWidget {
-  final BookingRequestUI booking;
-  final Function(BookingRequestUI)? onConfirm;
-  final Function(BookingRequestUI)? onReject;
-  final Function(BookingRequestUI) onShowDetails;
+  final BookingResponse booking;
+  final Function(BookingResponse)? onConfirm;
+  final Function(BookingResponse)? onReject;
+  final Function(BookingResponse) onShowDetails;
 
   const BookingCardActions({
     super.key,

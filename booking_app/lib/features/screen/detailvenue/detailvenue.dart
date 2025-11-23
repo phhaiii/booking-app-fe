@@ -14,7 +14,6 @@ import 'package:booking_app/features/screen/detailvenue/detailvenuewidgets/botto
 import 'package:booking_app/model/menu_model.dart';
 import 'package:booking_app/features/controller/detailvenue_controller.dart';
 import 'package:booking_app/utils/constants/colors.dart';
-import 'package:booking_app/features/screen/chat/chat_ui.dart';
 import 'package:booking_app/features/screen/list/calendar_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -124,23 +123,9 @@ class DetailVenueScreen extends StatelessWidget {
         }
         return BottomActionButtons(
           venue: controller.venue.value!,
-          onChatPressed: () => _navigateToChat(controller.venue.value!),
           onBookingPressed: () => _navigateToBooking(controller.venue.value!),
         );
       }),
-    );
-  }
-
-  void _navigateToChat(venue) {
-    Get.to(
-      () => const ChatUIScreen(),
-      arguments: {
-        'venueId': venue.id.toString(),
-        'venueTitle': venue.title,
-        'ownerId': venue.vendor.id.toString(),
-        'ownerName': venue.vendor.fullName,
-      },
-      transition: Transition.rightToLeft,
     );
   }
 

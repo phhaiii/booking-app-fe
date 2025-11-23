@@ -37,20 +37,6 @@ class BookingStatsCards extends StatelessWidget {
                       color: Colors.green,
                     )),
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // Second row
-          Row(
-            children: [
-              Expanded(
-                child: Obx(() => _buildStatCard(
-                      icon: Iconsax.close_circle,
-                      label: 'Từ chối',
-                      value: controller.rejectedBookings.length.toString(),
-                      color: Colors.red,
-                    )),
-              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Obx(() => _buildStatCard(

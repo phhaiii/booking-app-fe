@@ -171,21 +171,21 @@ class ProfileScreen extends StatelessWidget {
                 const SizedBox(height: WSizes.spaceBtwItems),
 
                 // Security settings
-                const WSectionHeading(
-                    title: 'Cài đặt bảo mật', showActionButton: false),
-                const SizedBox(height: WSizes.spaceBtwItems),
+                // const WSectionHeading(
+                //     title: 'Cài đặt bảo mật', showActionButton: false),
+                // const SizedBox(height: WSizes.spaceBtwItems),
 
-                WProfileMenu(
-                  title: 'Đổi mật khẩu',
-                  value: '',
-                  icon: Iconsax.lock,
-                  onPressed: () =>
-                      _showChangePasswordDialog(context, controller),
-                ),
+                // WProfileMenu(
+                //   title: 'Đổi mật khẩu',
+                //   value: '',
+                //   icon: Iconsax.lock,
+                //   onPressed: () =>
+                //       _showChangePasswordDialog(context, controller),
+                // ),
 
-                const SizedBox(height: WSizes.spaceBtwItems),
-                const Divider(),
-                const SizedBox(height: WSizes.spaceBtwItems),
+                // const SizedBox(height: WSizes.spaceBtwItems),
+                // const Divider(),
+                // const SizedBox(height: WSizes.spaceBtwItems),
 
                 // Logout button
                 Center(
@@ -379,137 +379,137 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  void _showChangePasswordDialog(
-      BuildContext context, ProfileController controller) {
-    final currentPasswordController = TextEditingController();
-    final newPasswordController = TextEditingController();
-    final confirmPasswordController = TextEditingController();
-    bool obscureCurrentPassword = true;
-    bool obscureNewPassword = true;
-    bool obscureConfirmPassword = true;
+  // void _showChangePasswordDialog(
+  //     BuildContext context, ProfileController controller) {
+  //   final currentPasswordController = TextEditingController();
+  //   final newPasswordController = TextEditingController();
+  //   final confirmPasswordController = TextEditingController();
+  //   bool obscureCurrentPassword = true;
+  //   bool obscureNewPassword = true;
+  //   bool obscureConfirmPassword = true;
 
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('Đổi mật khẩu'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Current Password
-                    TextField(
-                      controller: currentPasswordController,
-                      obscureText: obscureCurrentPassword,
-                      decoration: InputDecoration(
-                        labelText: 'Mật khẩu hiện tại',
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            obscureCurrentPassword
-                                ? Iconsax.eye_slash
-                                : Iconsax.eye,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              obscureCurrentPassword = !obscureCurrentPassword;
-                            });
-                          },
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
+  //   showDialog(
+  //     context: context,
+  //     builder: (BuildContext context) {
+  //       return StatefulBuilder(
+  //         builder: (context, setState) {
+  //           return AlertDialog(
+  //             title: const Text('Đổi mật khẩu'),
+  //             content: SingleChildScrollView(
+  //               child: Column(
+  //                 mainAxisSize: MainAxisSize.min,
+  //                 children: [
+  //                   // Current Password
+  //                   TextField(
+  //                     controller: currentPasswordController,
+  //                     obscureText: obscureCurrentPassword,
+  //                     decoration: InputDecoration(
+  //                       labelText: 'Mật khẩu hiện tại',
+  //                       border: const OutlineInputBorder(),
+  //                       suffixIcon: IconButton(
+  //                         icon: Icon(
+  //                           obscureCurrentPassword
+  //                               ? Iconsax.eye_slash
+  //                               : Iconsax.eye,
+  //                         ),
+  //                         onPressed: () {
+  //                           setState(() {
+  //                             obscureCurrentPassword = !obscureCurrentPassword;
+  //                           });
+  //                         },
+  //                       ),
+  //                     ),
+  //                   ),
+  //                   const SizedBox(height: 16),
 
-                    // New Password
-                    TextField(
-                      controller: newPasswordController,
-                      obscureText: obscureNewPassword,
-                      decoration: InputDecoration(
-                        labelText: 'Mật khẩu mới',
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            obscureNewPassword
-                                ? Iconsax.eye_slash
-                                : Iconsax.eye,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              obscureNewPassword = !obscureNewPassword;
-                            });
-                          },
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
+  //                   // New Password
+  //                   TextField(
+  //                     controller: newPasswordController,
+  //                     obscureText: obscureNewPassword,
+  //                     decoration: InputDecoration(
+  //                       labelText: 'Mật khẩu mới',
+  //                       border: const OutlineInputBorder(),
+  //                       suffixIcon: IconButton(
+  //                         icon: Icon(
+  //                           obscureNewPassword
+  //                               ? Iconsax.eye_slash
+  //                               : Iconsax.eye,
+  //                         ),
+  //                         onPressed: () {
+  //                           setState(() {
+  //                             obscureNewPassword = !obscureNewPassword;
+  //                           });
+  //                         },
+  //                       ),
+  //                     ),
+  //                   ),
+  //                   const SizedBox(height: 16),
 
-                    // Confirm Password
-                    TextField(
-                      controller: confirmPasswordController,
-                      obscureText: obscureConfirmPassword,
-                      decoration: InputDecoration(
-                        labelText: 'Xác nhận mật khẩu mới',
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            obscureConfirmPassword
-                                ? Iconsax.eye_slash
-                                : Iconsax.eye,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              obscureConfirmPassword = !obscureConfirmPassword;
-                            });
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Hủy'),
-                ),
-                Obx(() => ElevatedButton(
-                      onPressed: controller.isChangingPassword.value
-                          ? null
-                          : () async {
-                              await controller.changePassword(
-                                currentPasswordController.text,
-                                newPasswordController.text,
-                                confirmPasswordController.text,
-                              );
-                              if (!controller.isChangingPassword.value) {
-                                Navigator.of(context).pop();
-                              }
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: WColors.primary,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: controller.isChangingPassword.value
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            )
-                          : const Text('Đổi mật khẩu'),
-                    )),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
+  //                   // Confirm Password
+  //                   TextField(
+  //                     controller: confirmPasswordController,
+  //                     obscureText: obscureConfirmPassword,
+  //                     decoration: InputDecoration(
+  //                       labelText: 'Xác nhận mật khẩu mới',
+  //                       border: const OutlineInputBorder(),
+  //                       suffixIcon: IconButton(
+  //                         icon: Icon(
+  //                           obscureConfirmPassword
+  //                               ? Iconsax.eye_slash
+  //                               : Iconsax.eye,
+  //                         ),
+  //                         onPressed: () {
+  //                           setState(() {
+  //                             obscureConfirmPassword = !obscureConfirmPassword;
+  //                           });
+  //                         },
+  //                       ),
+  //                     ),
+  //                   ),
+  //                 ],
+  //               ),
+  //             ),
+  //             actions: [
+  //               TextButton(
+  //                 onPressed: () => Navigator.of(context).pop(),
+  //                 child: const Text('Hủy'),
+  //               ),
+  //               Obx(() => ElevatedButton(
+  //                     onPressed: controller.isChangingPassword.value
+  //                         ? null
+  //                         : () async {
+  //                             await controller.changePassword(
+  //                               currentPasswordController.text,
+  //                               newPasswordController.text,
+  //                               confirmPasswordController.text,
+  //                             );
+  //                             if (!controller.isChangingPassword.value) {
+  //                               Navigator.of(context).pop();
+  //                             }
+  //                           },
+  //                     style: ElevatedButton.styleFrom(
+  //                       backgroundColor: WColors.primary,
+  //                       foregroundColor: Colors.white,
+  //                     ),
+  //                     child: controller.isChangingPassword.value
+  //                         ? const SizedBox(
+  //                             width: 20,
+  //                             height: 20,
+  //                             child: CircularProgressIndicator(
+  //                               strokeWidth: 2,
+  //                               valueColor:
+  //                                   AlwaysStoppedAnimation<Color>(Colors.white),
+  //                             ),
+  //                           )
+  //                         : const Text('Đổi mật khẩu'),
+  //                   )),
+  //             ],
+  //           );
+  //         },
+  //       );
+  //     },
+  //   );
+  // }
 
   void _showLogoutDialog(BuildContext context, ProfileController controller) {
     showDialog(

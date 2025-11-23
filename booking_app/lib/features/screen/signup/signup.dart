@@ -33,13 +33,6 @@ class SignupScreen extends StatelessWidget {
               // Form
               const SignupForm(),
               const SizedBox(height: WSizes.spaceBtwSections),
-
-              // Divider
-              WFormDivider(dividerText: WTexts.orSignUpWith.capitalize!),
-              const SizedBox(height: WSizes.spaceBtwSections),
-
-              // Social Buttons
-              const WSocialButton(),
             ],
           ),
         ),

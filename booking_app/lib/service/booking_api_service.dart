@@ -280,22 +280,52 @@ class BookingApiService {
   // Confirm booking
   Future<BookingResponse> confirmBooking(int id, {String? note}) async {
     try {
-      final response = await http.patch(
-        Uri.parse('$baseUrl/api/bookings/vendor/$id/confirm'),
+      print('🔄 Confirming booking ID: $id');
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/bookings/$id/confirm'),
         headers: await _getHeaders(),
         body: note != null ? jsonEncode({'note': note}) : null,
       );
 
-      print('Confirm booking response: ${response.statusCode}');
+      print('📥 Confirm booking response: ${response.statusCode}');
 
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        return BookingResponse.fromJson(responseData['data']);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final decodedBody = utf8.decode(response.bodyBytes);
+        print('═══════════════════════════════════════');
+        print('✅ CONFIRM BOOKING RESPONSE');
+        print('Status: ${response.statusCode}');
+        print('Body: $decodedBody');
+        print('═══════════════════════════════════════');
+
+        final jsonData = jsonDecode(decodedBody);
+
+        // Check if response has nested structure with booking and slotAvailability
+        if (jsonData is Map &&
+            jsonData.containsKey('success') &&
+            jsonData['success'] == true) {
+          final data = jsonData['data'];
+          print('📋 Data keys: ${data?.keys}');
+
+          // If data has 'booking' nested object
+          if (data is Map && data.containsKey('booking')) {
+            print('📋 Using nested booking object');
+            return BookingResponse.fromJson(data['booking']);
+          }
+
+          // Otherwise use data directly
+          return BookingResponse.fromJson(data);
+        }
+
+        // Handle direct BookingResponse
+        return BookingResponse.fromJson(jsonData);
       } else {
-        throw Exception('Failed to confirm booking: ${response.body}');
+        final errorBody = utf8.decode(response.bodyBytes);
+        print('❌ Failed to confirm booking: ${response.statusCode}');
+        print('   Error: $errorBody');
+        throw Exception('Failed to confirm booking: $errorBody');
       }
     } catch (e) {
-      print('Error confirming booking: $e');
+      print('❌ Error confirming booking: $e');
       throw Exception('Error confirming booking: $e');
     }
   }
@@ -303,13 +333,18 @@ class BookingApiService {
   // Reject booking
   Future<BookingResponse> rejectBooking(int id, String reason) async {
     try {
+      print('🔄 Rejecting booking ID: $id with reason: $reason');
+
+      // Backend expects reason as query parameter
+      final uri = Uri.parse('$baseUrl/api/bookings/$id/reject')
+          .replace(queryParameters: {'reason': reason});
+
       final response = await http.post(
-        Uri.parse('$baseUrl/api/bookings/vendor/$id/reject'),
+        uri,
         headers: await _getHeaders(),
-        body: jsonEncode({'reason': reason}),
       );
 
-      print('Reject booking response: ${response.statusCode}');
+      print('📥 Reject booking response: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final decodedBody = utf8.decode(response.bodyBytes);
@@ -334,19 +369,31 @@ class BookingApiService {
   // Complete booking
   Future<BookingResponse> completeBooking(int id) async {
     try {
-      final response = await http.patch(
-        Uri.parse('$baseUrl/api/bookings/vendor/$id/complete'),
+      print('🔄 Completing booking ID: $id');
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/bookings/$id/complete'),
         headers: await _getHeaders(),
       );
 
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        return BookingResponse.fromJson(responseData['data']);
+      print('📥 Complete booking response: ${response.statusCode}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final decodedBody = utf8.decode(response.bodyBytes);
+        print('✅ Response body: $decodedBody');
+        final jsonData = jsonDecode(decodedBody);
+
+        // Parse ApiResponse format
+        if (jsonData is Map && jsonData.containsKey('data')) {
+          return BookingResponse.fromJson(jsonData['data']);
+        }
+        return BookingResponse.fromJson(jsonData);
       } else {
-        throw Exception('Failed to complete booking: ${response.body}');
+        final errorBody = utf8.decode(response.bodyBytes);
+        print('❌ Failed to complete booking: $errorBody');
+        throw Exception('Failed to complete booking: $errorBody');
       }
     } catch (e) {
-      print('Error completing booking: $e');
+      print('❌ Error completing booking: $e');
       throw Exception('Error completing booking: $e');
     }
   }
@@ -561,15 +608,35 @@ class BookingApiService {
 
       if (response.statusCode == 200) {
         final decodedBody = utf8.decode(response.bodyBytes);
-        print('✅ Slot availability response body: $decodedBody');
+        print('═══════════════════════════════════════');
+        print('✅ SLOT AVAILABILITY RESPONSE');
+        print('Raw body: $decodedBody');
+        print('═══════════════════════════════════════');
+
         final jsonData = jsonDecode(decodedBody);
 
-        // Handle ApiResponse format
+        // Handle ApiResponse format with nested slotAvailability
         if (jsonData is Map && jsonData['success'] == true) {
-          return SlotAvailabilityResponse.fromJson(jsonData['data']);
+          final data = jsonData['data'];
+          print('📋 Data object: $data');
+
+          // Check if response has slotAvailability nested object
+          if (data is Map && data.containsKey('slotAvailability')) {
+            print('📋 Using nested slotAvailability object');
+            final slotData = data['slotAvailability'];
+            print('📋 Slots array length: ${slotData['slots']?.length ?? 0}');
+            return SlotAvailabilityResponse.fromJson(slotData);
+          }
+
+          // Otherwise use data directly
+          print('📋 Using data object directly');
+          print('📋 Slots array: ${data['slots']}');
+          return SlotAvailabilityResponse.fromJson(data);
         }
 
         // Handle direct object
+        print('📋 Direct object: $jsonData');
+        print('📋 Slots array: ${jsonData['slots']}');
         return SlotAvailabilityResponse.fromJson(jsonData);
       } else {
         final errorBody = utf8.decode(response.bodyBytes);

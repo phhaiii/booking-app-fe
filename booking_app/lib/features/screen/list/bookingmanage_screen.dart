@@ -34,6 +34,8 @@ class _BookingManagementScreenState extends State<BookingManagementScreen> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
   int selectedTabIndex = 0;
+  bool canManageBookings = true; 
+  bool isInitialLoad = true; 
 
   @override
   void initState() {
@@ -64,66 +66,82 @@ class _BookingManagementScreenState extends State<BookingManagementScreen> {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: _buildAppBar(),
-      body: GetBuilder<BookingController>(
-        init: controller,
-        builder: (ctrl) {
-          if (ctrl.isLoading.value && ctrl.allBookings.isEmpty) {
-            return const BookingLoadingWidget();
-          }
+      body: Obx(() {
+        final ctrl = controller!;
 
-          return RefreshIndicator(
-            onRefresh: () => ctrl.refreshBookings(),
-            color: WColors.primary,
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: Column(
-                children: [
-                  BookingStatsCards(controller: ctrl),
-                  const SizedBox(height: 16),
-                  BookingCalendarWidget(
-                    controller: ctrl,
-                    calendarFormat: _calendarFormat,
-                    focusedDay: _focusedDay,
-                    selectedDay: _selectedDay,
-                    onDaySelected: _onDaySelected,
-                    onFormatChanged: (format) {
-                      if (_calendarFormat != format) {
-                        setState(() {
-                          _calendarFormat = format;
-                        });
-                      }
-                    },
-                    onPageChanged: (focusedDay) {
+        // ✅ Set isInitialLoad = false sau khi load xong (dù có data hay không)
+        if (isInitialLoad && !ctrl.isLoading.value) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                isInitialLoad = false;
+              });
+            }
+          });
+        }
+
+        print(
+            ' Building body: isLoading=${ctrl.isLoading.value}, allBookings=${ctrl.allBookings.length}, isInitialLoad=$isInitialLoad');
+
+        // ✅ Chỉ hiển thị loading khi đang initial load
+        if (isInitialLoad) {
+          print('   → Showing loading widget');
+          return const BookingLoadingWidget();
+        }
+
+        print('   → Showing main content');
+        return RefreshIndicator(
+          onRefresh: () => ctrl.refreshBookings(),
+          color: WColors.primary,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Column(
+              children: [
+                BookingStatsCards(controller: ctrl),
+                const SizedBox(height: 16),
+                BookingCalendarWidget(
+                  controller: ctrl,
+                  calendarFormat: _calendarFormat,
+                  focusedDay: _focusedDay,
+                  selectedDay: _selectedDay,
+                  onDaySelected: _onDaySelected,
+                  onFormatChanged: (format) {
+                    if (_calendarFormat != format) {
                       setState(() {
-                        _focusedDay = focusedDay;
+                        _calendarFormat = format;
                       });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  BookingTabBar(
-                    selectedIndex: selectedTabIndex,
-                    onTabSelected: (index) {
-                      setState(() {
-                        selectedTabIndex = index;
-                      });
-                    },
-                    tabs: const [
-                      'Chờ duyệt',
-                      'Đã duyệt',
-                      'Đã từ chối',
-                      'Đã hủy',
-                      'Khung giờ',
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTabContent(ctrl),
-                  const SizedBox(height: 80),
-                ],
-              ),
+                    }
+                  },
+                  onPageChanged: (focusedDay) {
+                    setState(() {
+                      _focusedDay = focusedDay;
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+                BookingTabBar(
+                  selectedIndex: selectedTabIndex,
+                  onTabSelected: (index) {
+                    setState(() {
+                      selectedTabIndex = index;
+                    });
+                  },
+                  tabs: const [
+                    'Chờ duyệt',
+                    'Đã duyệt',
+                    'Đã từ chối',
+                    'Đã hủy',
+                    'Khung giờ',
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _buildTabContent(ctrl),
+                const SizedBox(height: 80),
+              ],
             ),
-          );
-        },
-      ),
+          ),
+        );
+      }),
     );
   }
 
@@ -157,17 +175,24 @@ class _BookingManagementScreenState extends State<BookingManagementScreen> {
   }
 
   Widget _buildTabContent(BookingController ctrl) {
+    print(
+        '🔍 _buildTabContent: selectedTabIndex=$selectedTabIndex, canManageBookings=$canManageBookings');
     return Obx(() {
       switch (selectedTabIndex) {
         case 0: // Pending
+          print(
+              '📋 Building Pending tab: ${ctrl.pendingBookings.length} bookings, showActions=$canManageBookings');
           return BookingListWidget(
             bookings: ctrl.pendingBookings,
             emptyMessage: 'Không có yêu cầu nào đang chờ',
             emptyIcon: Iconsax.clock,
             emptyColor: Colors.orange,
-            showActions: true,
-            onConfirm: (booking) => _confirmBooking(booking),
-            onReject: (booking) => _rejectBooking(booking),
+            showActions: canManageBookings, // ✅ Chỉ hiển thị nút nếu có quyền
+            onConfirm: canManageBookings
+                ? (booking) => _confirmBooking(booking)
+                : null,
+            onReject:
+                canManageBookings ? (booking) => _rejectBooking(booking) : null,
             onShowDetails: (booking) => _showBookingDetails(booking),
           );
         case 1: // Confirmed
@@ -218,29 +243,39 @@ class _BookingManagementScreenState extends State<BookingManagementScreen> {
     }
   }
 
-  void _confirmBooking(BookingRequestUI booking) {
+  void _confirmBooking(BookingResponse booking) {
+    print('🔵 _confirmBooking called for booking ID: ${booking.id}');
+    print('   Customer: ${booking.customerName}');
+    print('   Status: ${booking.status}');
+
     BookingConfirmDialog.show(
       context,
       booking: booking,
       onConfirm: () {
+        print('✅ User confirmed in dialog');
         Get.back();
         controller?.confirmBooking(booking);
       },
     );
   }
 
-  void _rejectBooking(BookingRequestUI booking) {
+  void _rejectBooking(BookingResponse booking) {
+    print('🔴 _rejectBooking called for booking ID: ${booking.id}');
+    print('   Customer: ${booking.customerName}');
+    print('   Status: ${booking.status}');
+
     BookingRejectDialog.show(
       context,
       booking: booking,
       onReject: (reason) {
+        print('❌ User rejected with reason: $reason');
         Get.back();
         controller?.rejectBooking(booking, reason);
       },
     );
   }
 
-  void _showBookingDetails(BookingRequestUI booking) {
+  void _showBookingDetails(BookingResponse booking) {
     BookingDetailDialog.show(context, booking: booking);
   }
 

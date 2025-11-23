@@ -9,9 +9,6 @@ import 'package:iconsax/iconsax.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 
-// Import dialogs
-import 'package:booking_app/utils/dialogs/booking_detail_dialog.dart';
-
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
 
@@ -200,7 +197,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           ),
         ],
       ),
-      child: TableCalendar<BookingRequestUI>(
+      child: TableCalendar<BookingResponse>(
         firstDay: DateTime.utc(2020, 1, 1),
         lastDay: DateTime.utc(2030, 12, 31),
         focusedDay: _focusedDay,
@@ -330,8 +327,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildBookingCard(BookingRequestUI booking) {
-    final statusInfo = _getStatusInfo(booking.status);
+  Widget _buildBookingCard(BookingResponse booking) {
+    final statusInfo = _getStatusInfo(booking.statusEnum);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -437,7 +434,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                 size: 14, color: Colors.grey),
                             const SizedBox(width: 4),
                             Text(
-                              '${booking.numberOfGuests ?? 0} khách',
+                              '${booking.numberOfGuests} khách',
                               style: TextStyle(
                                   color: Colors.grey.shade600, fontSize: 14),
                             ),
@@ -448,6 +445,93 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   ),
                 ],
               ),
+              // Hiển thị lý do từ chối
+              if (booking.isRejected && booking.rejectionReason != null) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red.withOpacity(0.2)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Iconsax.info_circle,
+                          size: 16, color: Colors.red.shade700),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Lý do từ chối:',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.red.shade700,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              booking.rejectionReason!,
+                              style: TextStyle(
+                                color: Colors.grey.shade800,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              // Hiển thị lý do hủy
+              if (booking.isCancelled &&
+                  booking.cancellationReason != null) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Iconsax.info_circle,
+                          size: 16, color: Colors.grey.shade700),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Lý do hủy:',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey.shade700,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              booking.cancellationReason!,
+                              style: TextStyle(
+                                color: Colors.grey.shade800,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               if (booking.status == BookingStatus.pending) ...[
                 const SizedBox(height: 12),
                 const Divider(),
@@ -553,7 +637,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
   }
 
-  void _showCancelDialog(BookingRequestUI booking) {
+  void _showCancelDialog(BookingResponse booking) {
     Get.dialog(
       AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -614,7 +698,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  void _showBookingDetails(BookingRequestUI booking) {
+  void _showBookingDetails(BookingResponse booking) {
     Get.dialog(
       Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -673,14 +757,103 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             .format(booking.requestedDate),
                       ),
                       _buildDetailRow(
-                          'Số khách', '${booking.numberOfGuests ?? 0} người'),
+                          'Số khách', '${booking.numberOfGuests} người'),
+                      _buildDetailRow('Yêu cầu đặc biệt', '${booking.specialRequests}'),
                       _buildDetailRow(
                         'Trạng thái',
-                        _getStatusInfo(booking.status)['label'],
+                        _getStatusInfo(booking.statusEnum)['label'],
                       ),
                       if (booking.message != null &&
                           booking.message!.isNotEmpty)
                         _buildDetailRow('Ghi chú', booking.message!),
+                      // Hiển thị lý do từ chối
+                      if (booking.isRejected &&
+                          booking.rejectionReason != null) ...[
+                        const SizedBox(height: 8),
+                        const Divider(),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(8),
+                            border:
+                                Border.all(color: Colors.red.withOpacity(0.2)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Iconsax.info_circle,
+                                      size: 18, color: Colors.red.shade700),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Lý do từ chối',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.red.shade700,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                booking.rejectionReason!,
+                                style: TextStyle(
+                                  color: Colors.grey.shade800,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      // Hiển thị lý do hủy
+                      if (booking.isCancelled &&
+                          booking.cancellationReason != null) ...[
+                        const SizedBox(height: 8),
+                        const Divider(),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(8),
+                            border:
+                                Border.all(color: Colors.grey.withOpacity(0.2)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Iconsax.info_circle,
+                                      size: 18, color: Colors.grey.shade700),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Lý do hủy',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey.shade700,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                booking.cancellationReason!,
+                                style: TextStyle(
+                                  color: Colors.grey.shade800,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

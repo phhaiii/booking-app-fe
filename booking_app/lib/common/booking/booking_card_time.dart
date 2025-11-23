@@ -4,7 +4,7 @@ import 'package:booking_app/response/booking_response.dart';
 import 'package:booking_app/utils/helpers/booking_helper.dart';
 
 class BookingCardTime extends StatelessWidget {
-  final BookingRequestUI booking;
+  final BookingResponse booking;
 
   const BookingCardTime({super.key, required this.booking});
 

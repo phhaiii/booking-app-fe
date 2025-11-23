@@ -4,7 +4,7 @@ import 'package:booking_app/utils/helpers/booking_helper.dart';
 import 'booking_status_badge.dart';
 
 class BookingCardHeader extends StatelessWidget {
-  final BookingRequestUI booking;
+  final BookingResponse booking;
 
   const BookingCardHeader({super.key, required this.booking});
 
@@ -15,13 +15,13 @@ class BookingCardHeader extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: BookingHelper.getStatusColor(booking.status)
+            color: BookingHelper.getStatusColor(booking.statusEnum)
                 .withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
             BookingHelper.getServiceIcon(booking.serviceType),
-            color: BookingHelper.getStatusColor(booking.status),
+            color: BookingHelper.getStatusColor(booking.statusEnum),
             size: 24,
           ),
         ),
@@ -48,7 +48,7 @@ class BookingCardHeader extends StatelessWidget {
             ],
           ),
         ),
-        BookingStatusBadge(status: booking.status),
+        BookingStatusBadge(status: booking.statusEnum),
       ],
     );
   }

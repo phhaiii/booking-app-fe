@@ -8,7 +8,7 @@ import '../helpers/booking_helper.dart';
 class BookingDetailDialog {
   static void show(
     BuildContext context, {
-    required BookingRequestUI booking,
+    required BookingResponse booking,
   }) {
     Get.dialog(
       Dialog(
@@ -30,10 +30,15 @@ class BookingDetailDialog {
                       _buildCustomerInfo(booking),
                       const SizedBox(height: 16),
                       _buildServiceInfo(booking),
-                      if (booking.message != null &&
-                          booking.message!.isNotEmpty) ...[
+                      if (booking.isRejected &&
+                          booking.rejectionReason != null) ...[
                         const SizedBox(height: 16),
-                        _buildMessage(booking.message!),
+                        _buildRejectionInfo(booking),
+                      ],
+                      if (booking.isCancelled &&
+                          booking.cancellationReason != null) ...[
+                        const SizedBox(height: 16),
+                        _buildCancellationInfo(booking),
                       ],
                     ],
                   ),
@@ -48,7 +53,7 @@ class BookingDetailDialog {
     );
   }
 
-  static Widget _buildHeader(BookingRequestUI booking) {
+  static Widget _buildHeader(BookingResponse booking) {
     return Row(
       children: [
         Container(
@@ -83,7 +88,7 @@ class BookingDetailDialog {
     );
   }
 
-  static Widget _buildCustomerInfo(BookingRequestUI booking) {
+  static Widget _buildCustomerInfo(BookingResponse booking) {
     return _DetailSection(
       title: 'Thông tin khách hàng',
       children: [
@@ -97,16 +102,17 @@ class BookingDetailDialog {
           value: booking.customerPhone,
           icon: Iconsax.call,
         ),
-        _DetailItem(
-          label: 'Email',
-          value: booking.customerEmail,
-          icon: Iconsax.sms,
-        ),
+        if (booking.customerEmail != null && booking.customerEmail!.isNotEmpty)
+          _DetailItem(
+            label: 'Email',
+            value: booking.customerEmail!,
+            icon: Iconsax.sms,
+          ),
       ],
     );
   }
 
-  static Widget _buildServiceInfo(BookingRequestUI booking) {
+  static Widget _buildServiceInfo(BookingResponse booking) {
     return _DetailSection(
       title: 'Thông tin dịch vụ',
       children: [
@@ -125,44 +131,115 @@ class BookingDetailDialog {
           value: BookingHelper.formatDateTime(booking.requestedDate),
           icon: Iconsax.calendar,
         ),
-        if (booking.numberOfGuests != null)
+        if (booking.numberOfGuests > 0)
           _DetailItem(
             label: 'Số khách',
             value: '${booking.numberOfGuests} người',
             icon: Iconsax.people,
           ),
-        if (booking.budget != null)
+        if (booking.specialRequests != null && booking.specialRequests!.isNotEmpty)
           _DetailItem(
-            label: 'Ngân sách',
-            value: '${BookingHelper.formatPrice(booking.budget!)} VNĐ',
-            icon: Iconsax.money,
+            label: 'Yêu cầu đặc biệt',
+            value: '${booking.specialRequests}',
+            icon: Iconsax.message_text,
           ),
       ],
     );
   }
 
-  static Widget _buildMessage(String message) {
+  static Widget _buildRejectionInfo(BookingResponse booking) {
     return _DetailSection(
-      title: 'Lời nhắn',
+      title: 'Thông tin từ chối',
       children: [
         Container(
-          width: double.infinity,
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.grey.shade50,
+            color: Colors.red.withOpacity(0.05),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey.shade200),
+            border: Border.all(color: Colors.red.withOpacity(0.2)),
           ),
-          child: Text(
-            message,
-            style: const TextStyle(height: 1.5),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Iconsax.info_circle, size: 20, color: Colors.red.shade700),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Lý do từ chối:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.red.shade700,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      booking.rejectionReason ?? 'Không có lý do cụ thể',
+                      style: TextStyle(
+                        color: Colors.grey.shade800,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ],
     );
   }
 
-  static Widget _buildActions(BookingRequestUI booking) {
+  static Widget _buildCancellationInfo(BookingResponse booking) {
+    return _DetailSection(
+      title: 'Thông tin hủy',
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.grey.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.withOpacity(0.2)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Iconsax.info_circle, size: 20, color: Colors.grey.shade700),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Lý do hủy:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade700,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      booking.cancellationReason ?? 'Không có lý do cụ thể',
+                      style: TextStyle(
+                        color: Colors.grey.shade800,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  static Widget _buildActions(BookingResponse booking) {
     return Row(
       children: [
         Expanded(
@@ -175,32 +252,6 @@ class BookingDetailDialog {
               ),
             ),
             child: const Text('Đóng'),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          flex: 2,
-          child: ElevatedButton.icon(
-            onPressed: () {
-              Get.back();
-              Get.snackbar(
-                '📞 Đang gọi',
-                'Gọi cho ${booking.customerName}...',
-                backgroundColor: Colors.blue.withOpacity(0.1),
-                colorText: Colors.blue,
-              );
-            },
-            icon: const Icon(Iconsax.call),
-            label: const Text('Gọi điện'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: WColors.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              elevation: 0,
-            ),
           ),
         ),
       ],

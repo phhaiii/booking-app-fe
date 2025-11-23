@@ -734,6 +734,7 @@ class MenuSection extends StatelessWidget {
                             id: existingMenu?.id,
                             name: nameController.text.trim(),
                             description: descController.text.trim(),
+                            vendorId: existingMenu?.vendorId ?? 0, 
                             price: price,
                             guestsPerTable: guestsPerTable,
                             pricePerPerson: pricePerPerson,

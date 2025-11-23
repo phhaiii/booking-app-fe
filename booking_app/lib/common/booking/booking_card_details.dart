@@ -5,7 +5,7 @@ import 'package:booking_app/utils/helpers/booking_helper.dart';
 import 'booking_detail_row.dart';
 
 class BookingCardDetails extends StatelessWidget {
-  final BookingRequestUI booking;
+  final BookingResponse booking;
 
   const BookingCardDetails({super.key, required this.booking});
 
@@ -21,24 +21,24 @@ class BookingCardDetails extends StatelessWidget {
         BookingDetailRow(
           icon: Iconsax.sms,
           label: 'Email:',
-          value: booking.customerEmail,
+          value: booking.customerEmail ?? '',
         ),
         BookingDetailRow(
           icon: Iconsax.calendar,
           label: 'Ngày mong muốn:',
           value: BookingHelper.formatDateTime(booking.requestedDate),
         ),
-        if (booking.numberOfGuests != null)
+        if (booking.numberOfGuests > 0)
           BookingDetailRow(
             icon: Iconsax.people,
             label: 'Số khách:',
             value: '${booking.numberOfGuests} người',
           ),
-        if (booking.budget != null)
+        if (booking.message != null && booking.message!.isNotEmpty)
           BookingDetailRow(
-            icon: Iconsax.money,
-            label: 'Ngân sách:',
-            value: '${BookingHelper.formatPrice(booking.budget!)} VNĐ',
+            icon: Iconsax.note,
+            label: 'Yêu cầu đặc biệt:',
+            value: booking.message!,
           ),
       ],
     );

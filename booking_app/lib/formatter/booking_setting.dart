@@ -24,31 +24,40 @@ class BookingSettings {
     this.holidays = const [],
   });
 
-  // ✅ Tính tổng số slots trong ngày
-  int get totalSlotsPerDay {
-    final workHours = workEndHour - workStartHour; // 20 - 10 = 10 giờ
-    return (workHours / sessionDurationHours).floor(); // 10 / 2 = 5 slots
-  }
+  // ✅ Tính tổng số slots trong ngày (Fixed: 4 slots)
+  int get totalSlotsPerDay => 4;
 
-  // ✅ Tổng capacity trong ngày
-  int get totalCapacityPerDay {
-    return totalSlotsPerDay * consultantCapacity; // 5 slots * 2 = 10 bookings/day
-  }
+  // ✅ Tổng capacity trong ngày (4 slots, mỗi slot nhận 1 booking)
+  int get totalCapacityPerDay => 4; // 4 slots × 1 booking each = 4 bookings/day
 
-  // ✅ Lấy danh sách time slots
+  // ✅ Lấy danh sách 4 time slots cố định (mỗi slot capacity = 1)
   List<TimeSlot> get timeSlots {
-    final slots = <TimeSlot>[];
-    for (int i = 0; i < totalSlotsPerDay; i++) {
-      final startHour = workStartHour + (i * sessionDurationHours);
-      final endHour = startHour + sessionDurationHours;
-      slots.add(TimeSlot(
-        id: 'slot_$i',
-        startHour: startHour,
-        endHour: endHour,
-        capacity: consultantCapacity,
-      ));
-    }
-    return slots;
+    return [
+      TimeSlot(
+        id: 'slot_0',
+        startHour: 10,
+        endHour: 12,
+        capacity: 1, // Chỉ nhận 1 booking
+      ),
+      TimeSlot(
+        id: 'slot_1',
+        startHour: 12,
+        endHour: 14,
+        capacity: 1, // Chỉ nhận 1 booking
+      ),
+      TimeSlot(
+        id: 'slot_2',
+        startHour: 14,
+        endHour: 16,
+        capacity: 1, // Chỉ nhận 1 booking
+      ),
+      TimeSlot(
+        id: 'slot_3',
+        startHour: 16,
+        endHour: 18,
+        capacity: 1, // Chỉ nhận 1 booking
+      ),
+    ];
   }
 
   // ✅ Check ngày có làm việc không
@@ -58,7 +67,8 @@ class BookingSettings {
   }
 
   bool isHoliday(DateTime date) {
-    final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    final dateStr =
+        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
     return holidays.contains(dateStr);
   }
 

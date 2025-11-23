@@ -6,13 +6,12 @@ import 'package:iconsax/iconsax.dart';
 
 class DashboardCard extends StatelessWidget {
   final VenueModel venue;
-  final VoidCallback? onFavoritePressed;
+
   final VoidCallback? onCardPressed;
 
   const DashboardCard({
     super.key,
     required this.venue,
-    this.onFavoritePressed,
     this.onCardPressed,
   });
 

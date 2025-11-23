@@ -1,68 +1,64 @@
 class Comment {
-  final String id;
-  final String userId;
-  final String venueId;
+  final int id;
+  final int postId;
+  final int userId;
   final String userName;
   final String? userAvatar;
   final String content;
   final double rating;
   final List<String>? images;
+  final bool isVerifiedBooking;
+  final int helpfulCount;
+  final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final bool isVerified;
-  final int helpfulCount;
 
   Comment({
     required this.id,
+    required this.postId,
     required this.userId,
-    required this.venueId,
     required this.userName,
     this.userAvatar,
     required this.content,
     required this.rating,
     this.images,
+    this.isVerifiedBooking = false,
+    this.helpfulCount = 0,
+    this.isActive = true,
     required this.createdAt,
     required this.updatedAt,
-    this.isVerified = false,
-    this.helpfulCount = 0,
   });
 
   // Factory constructor từ JSON
   factory Comment.fromJson(Map<String, dynamic> json) {
-    // Handle both snake_case and camelCase field names
     return Comment(
-      id: json['id']?.toString() ?? '',
-      userId: (json['user_id'] ?? json['userId'])?.toString() ?? '',
-      venueId: (json['venue_id'] ??
-                  json['venueId'] ??
-                  json['post_id'] ??
-                  json['postId'])
-              ?.toString() ??
-          '',
-      userName: json['user_name'] ??
-          json['userName'] ??
-          json['user']?['name'] ??
+      id: json['id'] ?? 0,
+      postId: json['postId'] ?? json['post_id'] ?? 0,
+      userId: json['userId'] ?? json['user_id'] ?? 0,
+      userName: json['userName'] ??
+          json['user_name'] ??
+          json['user']?['fullName'] ??
           'Anonymous',
-      userAvatar:
-          json['user_avatar'] ?? json['userAvatar'] ?? json['user']?['avatar'],
+      userAvatar: json['userAvatar'] ??
+          json['user_avatar'] ??
+          json['user']?['avatarUrl'],
       content: json['content'] ?? '',
-      rating: (json['rating'] ?? 0).toDouble(),
+      rating: (json['rating'] ?? 5.0).toDouble(),
       images: json['images'] != null ? List<String>.from(json['images']) : null,
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
-          : (json['createdAt'] != null
-              ? DateTime.parse(json['createdAt'])
+      isVerifiedBooking:
+          json['isVerifiedBooking'] ?? json['is_verified_booking'] ?? false,
+      helpfulCount: json['helpfulCount'] ?? json['helpful_count'] ?? 0,
+      isActive: json['isActive'] ?? json['is_active'] ?? true,
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
+          : (json['created_at'] != null
+              ? DateTime.parse(json['created_at'])
               : DateTime.now()),
-      updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'])
-          : (json['updatedAt'] != null
-              ? DateTime.parse(json['updatedAt'])
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'])
+          : (json['updated_at'] != null
+              ? DateTime.parse(json['updated_at'])
               : DateTime.now()),
-      isVerified: json['is_verified'] ??
-          json['isVerified'] ??
-          json['isVerifiedBooking'] ??
-          false,
-      helpfulCount: json['helpful_count'] ?? json['helpfulCount'] ?? 0,
     );
   }
 
@@ -70,19 +66,22 @@ class Comment {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'user_id': userId,
-      'venue_id': venueId,
-      'user_name': userName,
-      'user_avatar': userAvatar,
+      'postId': postId,
+      'userId': userId,
       'content': content,
       'rating': rating,
       'images': images,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
-      'is_verified': isVerified,
-      'helpful_count': helpfulCount,
+      'isVerifiedBooking': isVerifiedBooking,
+      'helpfulCount': helpfulCount,
+      'isActive': isActive,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
     };
   }
+
+  // Getter for backward compatibility
+  String get venueId => postId.toString();
+  bool get isVerified => isVerifiedBooking;
 
   // Formatted date for display
   String get formattedDate {
@@ -109,32 +108,34 @@ class Comment {
 
   // Copy with method for updating
   Comment copyWith({
-    String? id,
-    String? userId,
-    String? venueId,
+    int? id,
+    int? postId,
+    int? userId,
     String? userName,
     String? userAvatar,
     String? content,
     double? rating,
     List<String>? images,
+    bool? isVerifiedBooking,
+    int? helpfulCount,
+    bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
-    bool? isVerified,
-    int? helpfulCount,
   }) {
     return Comment(
       id: id ?? this.id,
+      postId: postId ?? this.postId,
       userId: userId ?? this.userId,
-      venueId: venueId ?? this.venueId,
       userName: userName ?? this.userName,
       userAvatar: userAvatar ?? this.userAvatar,
       content: content ?? this.content,
       rating: rating ?? this.rating,
       images: images ?? this.images,
+      isVerifiedBooking: isVerifiedBooking ?? this.isVerifiedBooking,
+      helpfulCount: helpfulCount ?? this.helpfulCount,
+      isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      isVerified: isVerified ?? this.isVerified,
-      helpfulCount: helpfulCount ?? this.helpfulCount,
     );
   }
 
@@ -240,8 +241,8 @@ class CommentsResponse {
       totalPages: totalPages,
       totalCount: totalCount,
       hasMore: hasMore,
-      averageRating: averageRating, // ✅ THÊM
-      totalComments: totalComments, // ✅ THÊM
+      averageRating: averageRating, 
+      totalComments: totalComments, 
     );
   }
 }

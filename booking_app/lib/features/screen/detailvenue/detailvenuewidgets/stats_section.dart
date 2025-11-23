@@ -60,7 +60,7 @@ class StatsSection extends StatelessWidget {
               child: _buildStatItem(
                 icon: Iconsax.money,
                 label: _formatPrice(venue?.price ?? 0),
-                sublabel: 'Giá/bàn',
+                sublabel: 'buổi',
                 color: Colors.green,
               ),
             ),
